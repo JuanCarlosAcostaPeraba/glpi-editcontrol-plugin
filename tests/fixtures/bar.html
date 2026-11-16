@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prueba de actividad del ticket</title>
+<style>
+  body{margin:0;background:#191b1f;color:#eee;font:14px system-ui,sans-serif}main{max-width:1100px;margin:24px auto}.alert{background:#252830;border:1px solid #454a55;border-radius:6px}.alert-warning{background:#403617;color:#fff3cd}.d-flex{display:flex}.align-items-center{align-items:center}.flex-wrap{flex-wrap:wrap}.gap-2{gap:8px}.m-3{margin:16px}.py-2{padding-top:8px;padding-bottom:8px}.px-3{padding-left:16px;padding-right:16px}.mb-0{margin:0}.flex-grow-1{flex-grow:1}.btn{font:inherit;padding:6px 10px;border-radius:4px;background:transparent;border:1px solid #83afff;color:#c8dcff;cursor:pointer}.btn:hover{background:#303c50}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}.btn:disabled{opacity:.65;cursor:default}[hidden]{display:none!important}
+</style>
+<main><div class="editcontrol-bootstrap"></div></main>
+<script>
+  const scenario = new URL(location.href).searchParams.get('scenario') || 'owner';
+  const cfg = {id:1,baseline:'current',nonce:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',mode:'warning',interval:40,url:'https://example.test/lease'};
+  document.querySelector('.editcontrol-bootstrap').dataset.config=JSON.stringify(cfg);
+  window.fixture = {calls:[], interval:null, scenario, failed:false};
+  const actualInterval=window.setInterval;
+  window.setInterval=fn=>{fixture.interval=fn;return 1;};
+  let owner = scenario === 'owner' || scenario === 'reader' || scenario === 'html' || scenario === 'race' ? 'Ana Pérez' : '';
+  let mine=false, requested=false, firstStatus=true;
+  window.fetch=async(url,options)=>{
+    const action=options.body.get('action');
+    fixture.calls.push({action,headers:options.headers,keepalive:!!options.keepalive});
+    if(options.headers['X-Glpi-Csrf-Token']!=='test-csrf') throw new Error('Missing CSRF header');
+    if(scenario==='recover'&&!fixture.failed){fixture.failed=true;throw new TypeError('Failed to fetch');}
+    if(scenario==='html') return {ok:false,status:403,redirected:false,headers:new Headers({'content-type':'text/html'}),json:async()=>{throw new Error('Must never parse HTML as JSON');}};
+    if(scenario==='race'&&firstStatus&&action==='status'){owner='';firstStatus=false;}
+    else if(scenario==='race'&&action==='acquire'){
+      owner='Ana Pérez';return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'Otro técnico tiene el control.'})};
+    }
+    if(action==='acquire'){owner='Luis García';mine=true;}
+    if(action==='request') requested=true;
+    if(action==='release'){owner='';mine=false;}
+    const r={ok:true,owner,mine,available:!owner,changed:false,started:1794837600,heartbeat:1794837600,same_user:false,requester_name:'',requested_by_me:requested,csrf:'test-csrf'};
+    if(action==='acquire')r.token='test-token';
+    return {ok:true,status:200,headers:new Headers({'content-type':'application/json'}),json:async()=>r};
+  };
+</script>
+<script src="../../public/js/editcontrol.js"></script>
+</html>

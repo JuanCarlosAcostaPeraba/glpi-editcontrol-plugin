@@ -126,7 +126,7 @@ final class PluginEditcontrolBridge {
         try {
             $s = self::service();
             $s->lock($id);
-            self::$baselines[$id] = $s->fingerprint($item->fields, (int)$s->row($id)['revision']);
+            self::$baselines[$id] = $s->renderedSnapshot($id, $item->fields);
             if (!self::$validated) { $s->unlockAll(); }
         } catch (Throwable $e) {
             Toolbox::logInFile('editcontrol', $e->getMessage() . "\n");
@@ -140,9 +140,10 @@ final class PluginEditcontrolBridge {
             $s = self::service();
             $s->lock($id);
             // Keep the form's actual fields, rather than replacing a stale form with a fresh baseline.
-            $baseline = self::$baselines[$id] ?? $s->fingerprint($item->fields, (int)$s->row($id)['revision']);
+            $baseline = self::$baselines[$id] ?? $s->renderedSnapshot($id, $item->fields);
             $cfg = ['id'=>$id, 'baseline'=>$baseline, 'nonce'=>self::nonce(),
                 'csrf'=>Session::getNewCSRFToken(), 'mode'=>self::config()['mode'],
+                'canEdit'=>$item->can($id, UPDATE),
                 'interval'=>max(15, (int)self::config()['ttl'] / 3), 'admin'=>self::admin(),
                 'url'=>Plugin::getWebDir('editcontrol') . '/ajax/lease.php'];
             echo '<div class="editcontrol-bootstrap" data-config="' . htmlspecialchars(json_encode($cfg, JSON_THROW_ON_ERROR), ENT_QUOTES, 'UTF-8') . '"></div>';

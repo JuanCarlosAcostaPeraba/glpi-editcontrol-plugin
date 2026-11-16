@@ -8,8 +8,8 @@ No usar datos asistenciales. Guardar versión, plugins activos, registros y resu
 
 | Caso | Pasos | Resultado exigido |
 |---|---|---|
-| 1. Dos técnicos abren | A y B abren el mismo ticket sin pulsar Editar; A adquiere | Ningún control al consultar; B ve propietario, inicio y actividad; no puede guardar |
-| 2. Adquisición simultánea | A y B pulsan Editar a la vez; repetir 20 veces | Un ganador y una fila por ticket; el otro recibe conflicto |
+| 1. Dos técnicos abren | A abre el ticket y B lo abre después | A adquiere automáticamente; B ve su nombre y Solicitar control; un perfil solo lectura no adquiere |
+| 2. Adquisición simultánea | A y B abren el mismo ticket a la vez; repetir 20 veces | Un ganador y una fila por ticket; el otro ve al ganador sin error técnico |
 | 3. Guardado | A cambia título y guarda; B espera | Cambio de A persiste; control liberado; B recibe aviso; debe recargar si su versión cambió |
 | 4. Cierre inesperado | A adquiere y termina navegador desde sistema | B puede adquirir tras TTL del último heartbeat; sin intervención ni cron |
 | 5. Red | A adquiere, editar sin enviar, desconectar red más de TTL, reconectar | B puede adquirir; A recibe pérdida de control; un POST antiguo de A es rechazado |

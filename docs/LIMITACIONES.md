@@ -1,13 +1,15 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.1.2 es experimental. Se ha autorizado e instalado una prueba en
+La versión 0.1.3 es experimental. Se ha autorizado e instalado una prueba en
 producción en **solo aviso**. El bloqueo estricto sigue sin validación completa.
 
 1. Se instaló y activó en GLPI 11.0.4. Se verificaron esquema y GET_LOCK sobre
    MariaDB 11.8.3, carga del plugin y entrega del JavaScript. No se ejecutó la matriz
-   con dos navegadores ni una instalación en GLPI 12. Las 30 comprobaciones locales usan un adaptador SQLite con
+   con dos navegadores reales ni una instalación en GLPI 12. Las 32 comprobaciones PHP locales usan un adaptador SQLite con
    GET_LOCK simulado mediante flock. No prueban el SQL MariaDB ni el funcionamiento
    real de sus mutex, CSRF del núcleo, hooks, derechos o selección de formularios.
+   Otros seis escenarios de navegador comprueban el JavaScript con respuestas
+   ficticias, incluidas cabecera CSRF y recuperación de una caída temporal.
 2. La producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35. La compatibilidad
    completa con GLPI 12 sigue pendiente. Esta entrega rechaza GLPI 10.
 3. El alcance se limita a las clases y hooks declarados en README. Documentos,

@@ -5,37 +5,26 @@
     if (node.dataset.mounted) return;
     node.dataset.mounted = '1';
     const c = JSON.parse(node.dataset.config);
-    // Only one controller per ticket page, even when forms are rendered again.
     if (document.querySelector('[data-editcontrol-active]')) return;
     node.dataset.editcontrolActive = '1';
-    let token = '', mine = false, changed = false, lastAvailable = true, busy = false;
+    let token = '', mine = false, changed = false, busy = false, stopped = false;
     let lastActivity = Date.now();
     const bar = document.createElement('section');
-    bar.className = 'alert alert-info m-3';
-    bar.setAttribute('aria-label', 'Control de edición');
+    const normalClass = 'alert alert-secondary d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
+    bar.className = normalClass;
+    bar.setAttribute('aria-label', 'Actividad del ticket');
     const msg = document.createElement('p');
-    msg.setAttribute('role', 'status'); msg.setAttribute('aria-live', 'polite');
-    bar.append(msg);
-    const buttons = {};
+    msg.className = 'mb-0 flex-grow-1';
+    msg.setAttribute('role', 'status');
+    msg.setAttribute('aria-live', 'polite');
+    msg.textContent = 'Comprobando quién está usando el ticket…';
+    const request = document.createElement('button');
+    request.type = 'button'; request.className = 'btn btn-sm btn-outline-primary';
+    request.textContent = 'Solicitar control'; request.hidden = true;
+    bar.append(msg, request);
+    (document.querySelector('main') || document.body).prepend(bar);
     const ticketForm = form => /(?:ticket|itilfollowup|tickettask|itilsolution)\.form\.php(?:$|[?\/])/.test(new URL(form.action, location.href).pathname)
       || !!form.querySelector('[name="tickets_id"], [name="itemtype"][value="Ticket"]');
-    function button(label, action) {
-      const b = document.createElement('button'); b.type = 'button';
-      b.className = 'btn btn-sm btn-outline-primary me-2'; b.textContent = label;
-      b.onclick = async () => {
-        if (busy) return;
-        busy = true;
-        try { await call(action); } catch (e) { fail(e); } finally { busy = false; }
-      };
-      buttons[action] = b; bar.append(b);
-    }
-    button('Editar', 'acquire'); button('Terminar edición', 'release'); button('Solicitar control', 'request');
-    if (c.admin) button('Tomar control', 'takeover');
-    const reload = document.createElement('button'); reload.type = 'button';
-    reload.className = 'btn btn-sm btn-outline-secondary'; reload.textContent = 'Recargar ticket';
-    reload.onclick = () => location.reload(); bar.append(reload);
-    (document.querySelector('main') || document.body).prepend(bar);
-    // A badge and a server guard remain effective if a custom form ignores disabled controls.
     function fields() {
       document.querySelectorAll('form[method="post" i]').forEach(form => {
         if (bar.contains(form) || !ticketForm(form)) return;
@@ -44,17 +33,15 @@
           if (!hidden) { hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = name; form.append(hidden); }
           if (hidden.value !== value) hidden.value = value;
         }
-        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(b => {
+        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(button => {
           const block = c.mode === 'strict' && (!mine || changed);
-          if (block && !b.disabled) { b.dataset.editcontrolDisabled = '1'; b.disabled = true; }
-          if (!block && b.dataset.editcontrolDisabled) { b.disabled = false; delete b.dataset.editcontrolDisabled; }
+          if (block && !button.disabled) { button.dataset.editcontrolDisabled = '1'; button.disabled = true; }
+          if (!block && button.dataset.editcontrolDisabled) { button.disabled = false; delete button.dataset.editcontrolDisabled; }
         });
       });
     }
-    // Cover jQuery AJAX timeline actions as well as ordinary form submissions.
     if (window.jQuery) window.jQuery.ajaxPrefilter((options, original, xhr) => {
-      const url = new URL(options.url, location.href);
-      if (url.origin === location.origin) {
+      if (new URL(options.url, location.href).origin === location.origin) {
         xhr.setRequestHeader('X-Editcontrol-Token', token);
         xhr.setRequestHeader('X-Editcontrol-Baseline', c.baseline);
       }
@@ -62,53 +49,107 @@
     document.addEventListener('submit', e => {
       if (c.mode === 'strict' && (!mine || changed) && e.target.method.toLowerCase() === 'post' && ticketForm(e.target)) {
         e.preventDefault(); e.stopImmediatePropagation();
-        msg.textContent = 'Guardado detenido. Adquiera el control o conserve el texto y recargue.';
+        msg.textContent = 'Este ticket está en uso o se ha actualizado. Conserve su texto antes de actualizar la página.';
       }
     }, true);
-    const observer = new MutationObserver(fields);
-    observer.observe(document.body, {childList:true, subtree:true});
-    for (const evt of ['input','pointerdown','keydown']) document.addEventListener(evt, () => { lastActivity = Date.now(); }, {passive:true});
-    function fail(e) {
-      mine = false; changed = true;
-      msg.textContent = `${e.message || 'Sin conexión.'} Conserve el texto antes de recargar.`;
-      bar.className = 'alert alert-danger m-3'; fields();
+    new MutationObserver(fields).observe(document.body, {childList:true, subtree:true});
+    for (const event of ['input','pointerdown','keydown']) {
+      document.addEventListener(event, () => { lastActivity = Date.now(); }, {passive:true});
+    }
+    function body(action, leaseToken = token) {
+      return new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token:leaseToken, baseline:c.baseline, _glpi_csrf_token:c.csrf});
+    }
+    function headers() {
+      // GLPI 11 checks this HEADER (not the POST field) on XMLHttpRequest requests.
+      return {'X-Requested-With':'XMLHttpRequest', 'X-Glpi-Csrf-Token':c.csrf};
     }
     async function call(action) {
-      const body = new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token, baseline:c.baseline, _glpi_csrf_token:c.csrf});
-      const res = await fetch(c.url, {method:'POST', credentials:'same-origin', body, headers:{'X-Requested-With':'XMLHttpRequest'}, signal:AbortSignal.timeout(12000)});
-      const r = await res.json();
+      const res = await fetch(c.url, {method:'POST', credentials:'same-origin', body:body(action), headers:headers(), signal:AbortSignal.timeout(12000)});
+      const type = res.headers.get('content-type') || '';
+      if (!type.toLowerCase().includes('application/json')) {
+        const error = new Error(res.status === 401 || res.status === 403 || res.redirected
+          ? 'La sesión necesita actualizarse. Guarde su texto y actualice la página.'
+          : 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.');
+        error.status = res.status; throw error;
+      }
+      let r;
+      try { r = await res.json(); }
+      catch { throw new Error('No se puede consultar la actividad del ticket. Se reintentará automáticamente.'); }
       if (r.csrf) c.csrf = r.csrf;
-      if (!res.ok || !r.ok) throw new Error(r.message || 'Sesión caducada o servicio no disponible.');
+      if (!res.ok || !r.ok) {
+        const error = new Error(r.message || 'No se puede consultar la actividad del ticket.');
+        error.status = res.status; throw error;
+      }
       if (r.token) { token = r.token; lastActivity = Date.now(); }
+      return r;
+    }
+    function render(r) {
       const lost = mine && !r.mine;
       mine = r.mine; changed = changed || r.changed || lost;
-      if (action === 'release') token = '';
-      const availableNotice = r.available && !lastAvailable ? 'El ticket ha quedado disponible. ' : '';
-      lastAvailable = r.available;
-      const time = value => new Date(value * 1000).toLocaleTimeString();
-      msg.textContent = availableNotice + (lost ? 'Ha perdido el control. Conserve su texto y recargue antes de editar.' : changed ? 'El ticket cambió o el control caducó. Conserve su texto y recargue antes de editar.' :
-        mine ? `Tiene el control desde ${time(r.started)}. Última actividad: ${time(r.heartbeat)}.${r.requester ? ' Otro técnico solicita el control.' : ''}` :
-        r.available ? 'Modo consulta. Puede adquirir el control para editar.' : `Editando: ${r.owner}. Desde ${time(r.started)}. Última actividad: ${time(r.heartbeat)}.`);
-      if (c.mode === 'warning') msg.textContent += ' Modo aviso: no se impide el guardado.';
-      bar.className = `alert ${changed ? 'alert-danger' : mine ? 'alert-success' : 'alert-info'} m-3`;
-      buttons.acquire.hidden = mine || !r.available || changed;
-      buttons.release.hidden = !mine;
-      buttons.request.hidden = mine || r.available;
-      if (buttons.takeover) buttons.takeover.hidden = mine || r.available || changed;
-      fields(); return r;
+      bar.className = normalClass;
+      if (r.owner) {
+        msg.textContent = `${r.owner}${mine ? ' (tú)' : r.same_user ? ' (otra pestaña)' : ''} está usando este ticket.`;
+        if (mine && r.requester_name) msg.textContent += ` ${r.requester_name} solicita el control.`;
+      } else {
+        msg.textContent = 'Ningún técnico está usando este ticket.';
+      }
+      if (changed) msg.textContent += ' El ticket se ha actualizado; conserve su texto antes de actualizar la página.';
+      const time = value => new Date(value * 1000).toLocaleString();
+      bar.title = r.owner ? `Desde ${time(r.started)}. Última actividad: ${time(r.heartbeat)}.` : '';
+      request.hidden = !c.canEdit || mine || r.available;
+      request.disabled = !!r.requested_by_me;
+      request.textContent = r.requested_by_me ? 'Solicitud enviada' : 'Solicitar control';
+      fields();
     }
-    async function poll() {
+    function fail(error) {
+      // A temporary outage does not discard the token, allowing later heartbeats to recover.
+      request.hidden = true;
+      msg.textContent = error.name === 'TypeError' || error.name === 'TimeoutError'
+        ? 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.' : error.message;
+      bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
+      if (c.mode === 'strict') { mine = false; fields(); }
+    }
+    request.onclick = async () => {
       if (busy) return;
+      busy = true; request.disabled = true;
+      try { render(await call('request')); }
+      catch (error) { fail(error); }
+      finally { busy = false; }
+    };
+    async function poll() {
+      if (busy || stopped || !node.isConnected) return;
       busy = true;
       try {
-        // Stop renewing an abandoned tab, even if the browser keeps its timers running.
         const active = document.visibilityState === 'visible' && Date.now() - lastActivity < 180000;
-        await call(mine && active && !changed ? 'heartbeat' : 'status');
-      } catch (e) { fail(e); } finally { busy = false; }
+        let r;
+        try { r = await call(mine && active && !changed ? 'heartbeat' : 'status'); }
+        catch (error) {
+          if (error.status !== 409) throw error;
+          r = await call('status');
+        }
+        // The first eligible visible tab acquires automatically. Readers never acquire.
+        if (r.available && c.canEdit && active && !changed && !r.changed) {
+          try { r = await call('acquire'); }
+          catch (error) {
+            if (error.status !== 409) throw error;
+            r = await call('status');
+          }
+        }
+        render(r);
+      } catch (error) { fail(error); }
+      finally { busy = false; }
     }
+    // Best-effort navigation/close release; TTL remains the correctness fallback.
+    window.addEventListener('pagehide', () => {
+      stopped = true;
+      if (!token) return;
+      fetch(c.url, {method:'POST', credentials:'same-origin', body:body('release'), headers:headers(), keepalive:true}).catch(() => {});
+      token = ''; mine = false;
+    });
+    window.addEventListener('pageshow', event => { if (event.persisted) { stopped = false; poll(); } });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(); });
     fields(); poll();
     setInterval(poll, c.interval * 1000);
-    // Correctness uses TTL, never unload/beacon delivery. No token is stored on disk.
   }
   const scan = () => document.querySelectorAll('.editcontrol-bootstrap').forEach(mount);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();

@@ -3,3 +3,5 @@ vendor/
 dist/
 .env
 tests/results/
+.playwright-cli/
+output/

@@ -6,8 +6,8 @@ import zipfile
 root = Path(__file__).resolve().parents[1]
 dest = root / 'dist'
 dest.mkdir(exist_ok=True)
-archive = dest / 'editcontrol-0.1.2.zip'
-excluded = {'.git', '.codebase-memory', 'dist', 'vendor', '__pycache__'}
+archive = dest / 'editcontrol-0.1.3.zip'
+excluded = {'.git', '.codebase-memory', 'dist', 'vendor', '__pycache__', '.playwright-cli', 'output'}
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as z:
     for file in sorted(root.rglob('*')):
         relative = file.relative_to(root)

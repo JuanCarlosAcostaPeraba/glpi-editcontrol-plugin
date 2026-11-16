@@ -7,7 +7,7 @@ un compañero. No se crearon tickets de prueba ni se activó el bloqueo estricto
 Estado final:
 
 - GLPI 11.0.4; PHP 8.2.35; MariaDB 11.8.3.
-- Plugin 0.1.2 instalado y activado por la consola oficial, ejecutada como usuario apache.
+- Plugin 0.1.3 instalado y activado por la consola oficial, ejecutada como usuario apache.
 - Modo `warning` (solo aviso), TTL 120 segundos.
 - ObjectLock nativo ya estaba desactivado; no se cambió esa configuración.
 - Código del plugin separado del núcleo, sin modificar archivos centrales.
@@ -19,10 +19,13 @@ Comprobaciones realizadas:
 - Sintaxis con el PHP real del servidor.
 - Creación de las tablas del plugin y carga de configuración.
 - GET_LOCK y RELEASE_LOCK reales en MariaDB, sin modificar tickets.
-- Plugin listado como activo y versión 0.1.2.
+- Plugin listado como activo.
 - Página de acceso y JavaScript devueltos con HTTP 200.
 - Revisión del tramo nuevo del registro después de la corrección, sin nuevos errores del plugin.
-- 30 comprobaciones locales, incluyendo ocho procesos concurrentes sobre el modelo SQLite.
+- 32 comprobaciones PHP locales, incluyendo ocho procesos concurrentes sobre el modelo SQLite.
+- Seis escenarios de navegador con respuestas simuladas y revisión visual a escritorio y 360 px.
+- La cabecera corregida se comprobó contra CheckCsrfListener real de GLPI 11.0.4,
+  en una prueba CLI aislada en memoria, sin autenticar usuarios ni crear sesiones persistentes.
 
 Durante la primera comprobación se detectaron y corrigieron tres problemas:
 ubicación del recurso JavaScript, ámbito de la variable global DB en la pantalla
@@ -30,13 +33,25 @@ de configuración y avisos por INSERT IGNORE. Se desactivó temporalmente el plu
 durante la sustitución. El modo aviso también se reforzó para no impedir guardados
 si falla la comprobación del plugin, y para no romper el renderizado del formulario.
 
+La revisión 0.1.3 responde a la petición de simplificar la barra: se adquiere el
+control al abrir la primera pestaña elegible y se muestra el nombre junto con
+Solicitar control para el otro técnico. Se retiraron Editar, Terminar edición,
+Recargar ticket y Tomar control de esa barra. La administración sigue disponible
+en su panel. La salida intenta liberar mediante fetch keepalive y mantiene TTL.
+
+También corrige el rechazo CSRF: GLPI 11 exige X-Glpi-Csrf-Token cuando la petición
+declara XMLHttpRequest, aunque el cuerpo ya incluya el token. No se desactiva
+ninguna protección. Una respuesta HTML o JSON inválida muestra un aviso comprensible.
+Los campos virtuales del formulario se excluyen de la huella y la respuesta de
+adquisición calcula correctamente la propiedad usando el token recién emitido.
+
 ## Prueba manual pendiente
 
 1. Recargar completamente la página del ticket (Ctrl+F5 si es necesario).
-2. Abrir un ticket y pulsar **Editar** en la barra de control. Abrirlo por sí solo
-   no adquiere el control, para permitir la consulta sin bloqueo.
+2. Abrir un ticket: la primera pestaña visible con UPDATE adquiere automáticamente.
 3. El compañero abre el mismo ticket y comprueba el nombre del propietario y el aviso.
-4. Terminar edición y comprobar el aviso de disponibilidad en la otra pestaña.
+4. El compañero pulsa Solicitar control y el propietario comprueba el aviso.
+5. El propietario sale del ticket; la otra pestaña adquiere cuando detecta disponibilidad.
 
 En modo aviso los guardados siguen permitidos. Esta prueba no valida todavía
 el rechazo de escrituras ni certifica todos los casos de concurrencia.

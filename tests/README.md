@@ -25,3 +25,23 @@ php -d extension=pdo_mysql tests/run.php
 En Linux se usan las mismas variables de entorno y comando PHP.
 Los resultados deben guardarse junto con versión de PHP, motor SQL y versión GLPI.
 La matriz de aceptación con dos navegadores está en `docs/ACEPTACION.md`.
+
+## Barra simplificada y transporte AJAX
+
+`tests/fixtures/bar.html` carga el JavaScript real con respuestas ficticias y sin
+sesiones de GLPI. `tests/ui-checks.js` comprueba adquisición automática, solicitud,
+permisos de lectura, carrera de apertura, recuperación tras caída temporal, cierre
+con keepalive y la cabecera CSRF exigida por GLPI 11. No sustituye la prueba integrada.
+
+Para reproducir con Playwright CLI, iniciar `python tests/preview.py` en una terminal
+(solo escucha en 127.0.0.1 y se detiene en cinco minutos). En otra terminal:
+
+```powershell
+npx --yes --package @playwright/cli playwright-cli -s=editcontrol-ui open http://127.0.0.1:18769/tests/fixtures/bar.html --browser chrome
+$checks = (Get-Content -Raw tests/ui-checks.js) -replace '\r?\n',' '
+npx --yes --package @playwright/cli playwright-cli -s=editcontrol-ui run-code $checks
+npx --yes --package @playwright/cli playwright-cli -s=editcontrol-ui close
+```
+
+La comprobación visual se realizó a anchura de escritorio y a 360 px, con la
+apariencia de prueba; las clases de la barra real heredan el tema de GLPI.

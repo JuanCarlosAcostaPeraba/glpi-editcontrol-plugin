@@ -1,4 +1,4 @@
-# Control de edición para GLPI — 0.1.2
+# Control de edición para GLPI — 0.1.3
 
 Primera versión experimental para impedir ediciones simultáneas de un ticket
 desde la interfaz central de GLPI. Repositorio independiente, rama `develop`.
@@ -13,12 +13,13 @@ La versión de producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35.
 
 ## Uso
 
-Abrir un ticket permite consultarlo sin adquirir el control. La barra muestra
-quién edita, inicio y última actividad. Pulsar **Editar** adquiere el control
-exclusivo de ese ticket para esa pestaña y sesión. No se comparte el token entre
-pestañas, ni siquiera del mismo usuario.
+Al abrir un ticket, la primera pestaña visible de un técnico con permiso UPDATE
+adquiere automáticamente el control. La barra muestra su nombre y ofrece solamente
+**Solicitar control** a otro técnico. Los perfiles de solo lectura nunca adquieren
+el control. No se comparte el token entre pestañas, ni siquiera del mismo usuario.
+Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
 
-**Terminar edición** libera el control. Tras un guardado protegido con éxito,
+Al salir del ticket, se intenta liberar el control automáticamente. Tras un guardado protegido con éxito,
 incluidos seguimiento, tarea o solución, el servidor intenta liberarlo al finalizar
 la petición. Si este paso falla, la caducidad sigue siendo obligatoria. Una pestaña
 cerrada o abandonada deja de renovar; el bloqueo vence sin depender de cron.
@@ -51,7 +52,7 @@ mezcla automática de borradores ni recuperación de texto garantizada al rediri
 8. Completar primero las pruebas del modo aviso. Activar **bloqueo estricto** y
    recargar todas las pestañas para realizar la matriz de aceptación.
 
-El 16 de noviembre de 2026 se instaló y activó 0.1.2 en gise.huc.es, en solo aviso
+El 16 de noviembre de 2026 se instaló y activó el plugin en gise.huc.es, en solo aviso
 y con TTL 120 segundos, por autorización expresa del usuario. No se crearon ni
 modificaron tickets de prueba. No se ha desplegado en gisepre.huc.es.
 Véase `docs/PRODUCCION.md` para las comprobaciones y la desactivación.
@@ -83,6 +84,7 @@ El modo **solo aviso permite guardar sin control** y no evita conflictos.
 - `tests/run.php`: reglas de control, sesiones, versión obsoleta y ocho procesos concurrentes.
 - `tests/README.md`: ejecución con modelo SQLite y con MariaDB/MySQL reales.
 - `docs/RESULTADOS.txt`: salida real de pruebas locales.
+- `tests/fixtures/bar.html` y `tests/ui-checks.js`: seis escenarios de navegador con respuestas simuladas.
 - `docs/INVESTIGACION.md`: fuentes oficiales y decisión de arquitectura.
 - `docs/ACEPTACION.md`: doce escenarios para dos navegadores en GLPI 11 y 12.
 - `docs/MANTENIMIENTO.md`: actualización, desactivación, retirada y diagnóstico.

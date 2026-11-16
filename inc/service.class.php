@@ -51,6 +51,13 @@ final class PluginEditcontrolService {
         if (!$fields) { throw new PluginEditcontrolConflict('El ticket ya no existe.'); }
         return $this->fingerprint($fields, (int)($this->row($id)['revision'] ?? 0));
     }
+    public function renderedSnapshot(int $id, array $rendered): string {
+        $stored = $this->db->fetchAssoc($this->q("SELECT * FROM glpi_tickets WHERE id=$id"));
+        if (!$stored) { throw new PluginEditcontrolConflict('El ticket ya no existe.'); }
+        // Form helpers and plugins can add virtual keys which are not ticket columns.
+        // Preserve rendered real columns so stale forms remain detectable.
+        return $this->fingerprint(array_replace($stored, array_intersect_key($rendered, $stored)), (int)($this->row($id)['revision'] ?? 0));
+    }
     public function event(int $id, int $user, string $event, int $previous = 0): void {
         $e = $this->quote($event);
         $this->q("INSERT INTO glpi_plugin_editcontrol_events (tickets_id,users_id,previous_users_id,event,occurred) VALUES ($id,$user,$previous,$e,UNIX_TIMESTAMP())");
