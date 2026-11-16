@@ -1,0 +1,35 @@
+Fecha: 2026-11-16
+PHP 8.5.6, Windows, PDO SQLite.
+Sintaxis PHP: 9 archivos correctos. JavaScript: node --check correcto.
+No ejecutado: MariaDB real, instalación GLPI 11/12, navegación con dos técnicos.
+
+PASS: API REST reconocida por ruta exacta
+PASS: API con GLPI en subdirectorio
+PASS: ParÃ¡metro api.php no permite eludir el bloqueo
+PASS: PATH_INFO falso no permite eludir el bloqueo
+PASS: Endpoint de otro plugin no obtiene exenciÃ³n de API
+Backend: SQLite behavioural model (GET_LOCK simulated by flock)
+PASS: AdquisiciÃ³n explÃ­cita y propiedad
+PASS: Segundo tÃ©cnico rechazado
+PASS: Otra pestaÃ±a del mismo tÃ©cnico rechazada
+PASS: SesiÃ³n diferente no renueva
+PASS: Heartbeat mantiene caducidad limitada
+PASS: Solicitud visible para el propietario
+PASS: Solicitudes repetidas limitadas
+PASS: Propietario anterior no puede guardar tras toma de control
+PASS: LiberaciÃ³n tardÃ­a no libera al nuevo propietario
+PASS: Nuevo propietario conserva el control
+PASS: LiberaciÃ³n administrativa
+PASS: Heartbeat tras liberaciÃ³n administrativa rechazado
+PASS: Heartbeat no resucita un control caducado
+PASS: Caducidad libera sin cron ni cierre del navegador
+PASS: Token caducado no guarda tras readquisiciÃ³n
+PASS: Cambio externo invalida el formulario anterior
+PASS: Cambio externo permanece intacto
+PASS: No se adquiere control sobre formulario obsoleto
+PASS: Guardado y cierre simulados liberan el control
+PASS: Modo aviso permite avanzar sin control
+PASS: AuditorÃ­a identifica toma de control y propietario anterior
+PASS: 8 procesos concurrentes: exactamente un ganador
+PASS: RestricciÃ³n Ãºnica conserva una sola fila
+Suite completada. La validaciÃ³n de GLPI y navegador se ejecuta por separado.
