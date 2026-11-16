@@ -27,7 +27,7 @@ function plugin_init_editcontrol() {
 }
 function plugin_version_editcontrol() {
     return ['name'=>'Control de edición', 'version'=>PLUGIN_EDITCONTROL_VERSION,
-        'author'=>'HUC', 'license'=>'GPLv3+',
+        'author'=>'Juan Carlos Acosta Perabá', 'license'=>'GPLv3+',
         'requirements'=>['glpi'=>['min'=>'11.0.0', 'max'=>'12.0.99'], 'php'=>['min'=>'8.2']]];
 }
 function plugin_editcontrol_check_prerequisites() {
