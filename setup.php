@@ -1,6 +1,6 @@
 <?php
 /** SPDX-License-Identifier: GPL-3.0-or-later */
-define('PLUGIN_EDITCONTROL_VERSION', '0.1.0');
+define('PLUGIN_EDITCONTROL_VERSION', '0.1.2');
 require_once __DIR__ . '/inc/service.class.php';
 require_once __DIR__ . '/inc/bridge.class.php';
 
@@ -8,7 +8,7 @@ function plugin_init_editcontrol() {
     global $PLUGIN_HOOKS;
     $PLUGIN_HOOKS['csrf_compliant']['editcontrol'] = true;
     $PLUGIN_HOOKS['config_page']['editcontrol'] = 'front/config.php';
-    $PLUGIN_HOOKS['add_javascript']['editcontrol'] = ['js/editcontrol.js'];
+    $PLUGIN_HOOKS['add_javascript']['editcontrol'] = ['public/js/editcontrol.js'];
     $PLUGIN_HOOKS['post_item_form']['editcontrol'] = ['PluginEditcontrolBridge', 'form'];
     $PLUGIN_HOOKS['pre_item_form']['editcontrol'] = ['PluginEditcontrolBridge', 'capture'];
     foreach (['Ticket', 'ITILFollowup', 'TicketTask', 'ITILSolution'] as $type) {

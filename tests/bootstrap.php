@@ -41,7 +41,7 @@ final class TestDB {
         }
     }
     public function doQuery(string $sql) {
-        if (!$this->mysql) { $sql = str_replace(['INSERT IGNORE','LEFT('], ['INSERT OR IGNORE','ECLEFT('], $sql); }
+        if (!$this->mysql) { $sql = str_replace(['INSERT IGNORE','LEFT(', 'ON DUPLICATE KEY UPDATE tickets_id=tickets_id'], ['INSERT OR IGNORE','ECLEFT(', 'ON CONFLICT(tickets_id) DO NOTHING'], $sql); }
         return $this->pdo->query($sql);
     }
     public function escape(string $s): string { return substr($this->pdo->quote($s), 1, -1); }

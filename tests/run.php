@@ -6,6 +6,14 @@ check(PluginEditcontrolBridge::isApiPath('/glpi/api.php/v2/Ticket/1','/glpi'), '
 check(!PluginEditcontrolBridge::isApiPath('/front/ticket.form.php?x=api.php',''), 'Parámetro api.php no permite eludir el bloqueo');
 check(!PluginEditcontrolBridge::isApiPath('/front/ticket.form.php/api.php',''), 'PATH_INFO falso no permite eludir el bloqueo');
 check(!PluginEditcontrolBridge::isApiPath('/plugins/other/api.php',''), 'Endpoint de otro plugin no obtiene exención de API');
+foreach (['warning','strict'] as $mode) {
+    $env = getenv(); $env['EC_FAILURE_MODE'] = $mode;
+    $pipes=[];
+    $p=proc_open([PHP_BINARY,__DIR__.'/failure.php'],[0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,null,$env);
+    fclose($pipes[0]); $out=stream_get_contents($pipes[1]); $err=stream_get_contents($pipes[2]);
+    fclose($pipes[1]); fclose($pipes[2]); $exit=proc_close($p);
+    check($exit===0 && $out===$mode.'-safe', 'Fallo SQL: '.($mode==='warning' ? 'aviso permite guardar sin romper formulario' : 'estricto rechaza guardado sin romper formulario').' '.$err);
+}
 $db = new TestDB(); $db->reset();
 echo 'Backend: ' . ($db->mysql ? 'MariaDB/MySQL real' : 'SQLite behavioural model (GET_LOCK simulated by flock)') . PHP_EOL;
 $s = new PluginEditcontrolService($db,60);

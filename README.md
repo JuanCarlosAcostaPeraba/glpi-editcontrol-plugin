@@ -1,14 +1,15 @@
-# Control de edición para GLPI — 0.1.0
+# Control de edición para GLPI — 0.1.2
 
 Primera versión experimental para impedir ediciones simultáneas de un ticket
 desde la interfaz central de GLPI. Repositorio independiente, rama `develop`.
 No modifica el núcleo de GLPI y no reutiliza sus tablas ObjectLock.
 
-**Estado: preparado para pruebas; pendiente de validación integrada en GLPI.**
+**Estado: instalado en producción en modo solo aviso por indicación del usuario;
+pendiente de la prueba manual de dos técnicos y de validación integrada completa.**
 Compatibilidad objetivo: GLPI 11.x y 12.0.x, PHP 8.2 o posterior, MariaDB/MySQL
 con un único servidor de escritura y conexión con afinidad de sesión.
 No se declara compatibilidad con GLPI 10 ni con versiones futuras no probadas.
-La versión exacta desplegada en producción no se pudo identificar desde su login.
+La versión de producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35.
 
 ## Uso
 
@@ -50,7 +51,10 @@ mezcla automática de borradores ni recuperación de texto garantizada al rediri
 8. Completar primero las pruebas del modo aviso. Activar **bloqueo estricto** y
    recargar todas las pestañas para realizar la matriz de aceptación.
 
-No se ha instalado ni desplegado este plugin en gise.huc.es ni gisepre.huc.es.
+El 16 de noviembre de 2026 se instaló y activó 0.1.2 en gise.huc.es, en solo aviso
+y con TTL 120 segundos, por autorización expresa del usuario. No se crearon ni
+modificaron tickets de prueba. No se ha desplegado en gisepre.huc.es.
+Véase `docs/PRODUCCION.md` para las comprobaciones y la desactivación.
 
 ## Alcance de protección
 
@@ -87,5 +91,5 @@ El modo **solo aviso permite guardar sin control** y no evita conflictos.
 Ejecutar `python tools/package.py` para crear el paquete instalable en `dist/`.
 El nombre de carpeta dentro del ZIP siempre es `editcontrol`.
 
-No se ha publicado un repositorio remoto ni una versión en GitHub. El repositorio
-local contiene el código completo y los commits de desarrollo.
+Repositorio: https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin
+Los cambios se desarrollan en `develop` y se integran en `main`.

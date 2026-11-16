@@ -1,6 +1,7 @@
 <?php
 /** SPDX-License-Identifier: GPL-3.0-or-later */
 include '../../../inc/includes.php';
+global $DB;
 require_once dirname(__DIR__) . '/inc/service.class.php';
 require_once dirname(__DIR__) . '/inc/bridge.class.php';
 Session::checkLoginUser();

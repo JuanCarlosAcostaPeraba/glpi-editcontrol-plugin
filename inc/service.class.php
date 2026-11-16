@@ -29,7 +29,7 @@ final class PluginEditcontrolService {
             throw new PluginEditcontrolConflict('Operación en curso. Vuelva a intentarlo.');
         }
         $this->held[$id] = true;
-        $this->q("INSERT IGNORE INTO glpi_plugin_editcontrol_leases (tickets_id) VALUES ($id)");
+        $this->q("INSERT INTO glpi_plugin_editcontrol_leases (tickets_id) VALUES ($id) ON DUPLICATE KEY UPDATE tickets_id=tickets_id");
     }
     public function unlockAll(): void {
         foreach (array_keys($this->held) as $id) {

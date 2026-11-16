@@ -20,6 +20,9 @@ el navegador representa horas en su zona y el panel usa la zona configurada en P
 2. Guardar copia del plugin y de sus tablas/configuración.
 3. Desactivar desde GLPI; cerrar pestañas para no enviar formularios anteriores.
 4. Sustituir la carpeta completa, conservando nombre `editcontrol`.
+   Asegurar que cambian las fechas de los archivos PHP para que OPcache detecte
+   la actualización; si la validación de fechas está desactivada, seguir el
+   procedimiento de invalidación de OPcache de la instalación.
 5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v1 usa
    CREATE TABLE IF NOT EXISTS y no borra datos; repetirlo es idempotente.
 6. Esperar como mínimo el TTL anterior antes de reactivar y recargar los tickets.

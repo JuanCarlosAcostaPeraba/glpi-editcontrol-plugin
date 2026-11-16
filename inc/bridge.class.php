@@ -29,7 +29,8 @@ final class PluginEditcontrolBridge {
             // Lease expiry is the fallback if session/DB has already been closed.
             Toolbox::logInFile('editcontrol', 'Shutdown: ' . $e->getMessage() . "\n");
         } finally {
-            self::$service?->unlockAll();
+            try { self::$service?->unlockAll(); }
+            catch (Throwable $e) { Toolbox::logInFile('editcontrol', 'Unlock: ' . $e->getMessage() . "\n"); }
         }
     }
     public static function nonce(): string {
@@ -89,9 +90,12 @@ final class PluginEditcontrolBridge {
             if (!empty($item->fields['id'])) { $item->getFromDB((int)$item->fields['id']); }
             self::$validated[$id] = true;
         } catch (Throwable $e) {
-            $item->input = false;
-            Session::addMessageAfterRedirect($e instanceof PluginEditcontrolConflict ? $e->getMessage() : 'No se pudo comprobar el control de edición. Reintente sin cerrar esta pestaña.', false, ERROR);
-            if (!$e instanceof PluginEditcontrolConflict) { Toolbox::logInFile('editcontrol', $e->getMessage() . "\n"); }
+            // Advisory mode must never stop a GLPI write, including infrastructure failures.
+            if (self::config()['mode'] === 'strict') {
+                $item->input = false;
+                Session::addMessageAfterRedirect($e instanceof PluginEditcontrolConflict ? $e->getMessage() : 'No se pudo comprobar el control de edición. Reintente sin cerrar esta pestaña.', false, ERROR);
+            }
+            Toolbox::logInFile('editcontrol', $e->getMessage() . "\n");
         }
     }
     public static function saved($item): void {
@@ -103,9 +107,14 @@ final class PluginEditcontrolBridge {
         // Its subsequent automatic tasks/solutions belong to the creation request.
         $id = (int)($item->fields['id'] ?? 0);
         if ($id > 0) {
-            self::service()->lock($id);
-            self::service()->invalidate($id);
-            self::$validated[$id] = true;
+            try {
+                self::service()->lock($id);
+                self::service()->invalidate($id);
+                self::$validated[$id] = true;
+            } catch (Throwable $e) {
+                // The new ticket is already inserted; do not turn its success into a fatal error.
+                Toolbox::logInFile('editcontrol', $e->getMessage() . "\n");
+            }
         }
     }
     public static function beginCreation($item): void { self::$creationItems[] = $item; }
@@ -114,10 +123,14 @@ final class PluginEditcontrolBridge {
         if (!$item instanceof Ticket || empty($item->fields['id'])) { return; }
         $id = (int)$item->fields['id'];
         if (isset(self::$baselines[$id])) { return; }
-        $s = self::service();
-        $s->lock($id);
-        self::$baselines[$id] = $s->fingerprint($item->fields, (int)$s->row($id)['revision']);
-        if (!self::$validated) { $s->unlockAll(); }
+        try {
+            $s = self::service();
+            $s->lock($id);
+            self::$baselines[$id] = $s->fingerprint($item->fields, (int)$s->row($id)['revision']);
+            if (!self::$validated) { $s->unlockAll(); }
+        } catch (Throwable $e) {
+            Toolbox::logInFile('editcontrol', $e->getMessage() . "\n");
+        }
     }
     public static function form(array $params): void {
         $item = $params['item'] ?? null;

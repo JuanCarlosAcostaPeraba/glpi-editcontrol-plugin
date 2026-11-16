@@ -1,14 +1,15 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.1.0 es experimental y **no está aprobada para producción**.
+La versión 0.1.2 es experimental. Se ha autorizado e instalado una prueba en
+producción en **solo aviso**. El bloqueo estricto sigue sin validación completa.
 
-1. No se ejecutó una instalación real en GLPI 11 ni 12, ni la matriz con dos
-   navegadores. Las 28 comprobaciones locales usan un adaptador SQLite con
+1. Se instaló y activó en GLPI 11.0.4. Se verificaron esquema y GET_LOCK sobre
+   MariaDB 11.8.3, carga del plugin y entrega del JavaScript. No se ejecutó la matriz
+   con dos navegadores ni una instalación en GLPI 12. Las 30 comprobaciones locales usan un adaptador SQLite con
    GET_LOCK simulado mediante flock. No prueban el SQL MariaDB ni el funcionamiento
    real de sus mutex, CSRF del núcleo, hooks, derechos o selección de formularios.
-2. La versión real de producción sigue pendiente. Los repositorios locales no
-   prueban qué versión está desplegada. Si producción usa GLPI 10, esta entrega
-   rechaza su instalación: será necesario un adaptador o rama con pruebas propias.
+2. La producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35. La compatibilidad
+   completa con GLPI 12 sigue pendiente. Esta entrega rechaza GLPI 10.
 3. El alcance se limita a las clases y hooks declarados en README. Documentos,
    actores, validaciones, relaciones, restauración, escrituras SQL directas y plugins
    que evitan CommonDBTM no están protegidos completamente. Una integración que
@@ -53,7 +54,9 @@ La versión 0.1.0 es experimental y **no está aprobada para producción**.
     accesibilidad después de obtenerlas. No son un inventario paginado completo.
     El historial crece sin retención automática; definir y ejecutar una política local.
 15. Si falla el registro de un evento o la liberación final, la operación puede
-    informar error o mantener el lease hasta el TTL. No se garantiza auditoría
+    informar error o mantener el lease hasta el TTL. El modo aviso deja continuar
+    los guardados cuando falla la comprobación; el modo estricto los rechaza.
+    No se garantiza auditoría
     transaccional completa ante caída de SQL. Nunca se registran tokens en el historial.
 
 No utilizar esta versión como garantía absoluta de ausencia de sobrescrituras:
