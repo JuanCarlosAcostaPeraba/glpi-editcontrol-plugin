@@ -15,8 +15,8 @@ PASS: API con GLPI en subdirectorio
 PASS: ParÃ¡metro api.php no permite eludir el bloqueo
 PASS: PATH_INFO falso no permite eludir el bloqueo
 PASS: Endpoint de otro plugin no obtiene exenciÃ³n de API
-PASS: Fallo SQL: aviso permite guardar sin romper formulario 
-PASS: Fallo SQL: estricto rechaza guardado sin romper formulario 
+PASS: Fallo SQL: aviso permite guardar sin romper formulario
+PASS: Fallo SQL: estricto rechaza guardado sin romper formulario
 Backend: SQLite behavioural model (GET_LOCK simulated by flock)
 PASS: Campos virtuales no invalidan un formulario actual
 PASS: Normalizar campos virtuales conserva detecciÃ³n de formulario obsoleto
