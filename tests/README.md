@@ -52,3 +52,15 @@ consulta. Verifica ausencia de navegación, borradores intactos, token nuevo en 
 formulario de B y permiso de envío retirado a A en modo estricto.
 Se ejecuta con `run-code` igual que ui-checks.js. La suite PHP comprueba también
 cesión a una solicitud sustituida, una pestaña ajena y solicitudes abandonadas.
+
+`php tests/run-guards.php` requiere php-cgi y pdo_sqlite. Ejecuta la rama central
+del guard real (CGI, no la exención CLI) con clases GLPI simuladas: propietario,
+otro técnico, sesión distinta, versión obsoleta, AJAX, actores, documentos,
+relaciones, reparentado, exención API y autorización de toma de control. El modo
+CGI no abre un servidor ni crea sesiones persistentes. Solo en este proceso de
+prueba se desactiva el envío de cookies para poder fijar un ID de sesión sintético.
+
+`tests/ui-takeover.js` valida bloqueo fucsia, contraste 5,16:1, política de permisos,
+cambio de modo, carrera y robo entre dos pestañas sin solicitud. Comprueba que el
+antiguo propietario conserva su texto y queda en solo lectura, y que fetch recibe
+las credenciales correctas. No sustituye las pruebas de perfiles reales de GLPI.

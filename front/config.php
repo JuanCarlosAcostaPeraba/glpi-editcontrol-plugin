@@ -14,10 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!is_string($_POST['nonce'] ?? null) || !hash_equals(PluginEditcontrolBridge::nonce(), $_POST['nonce'])) { Html::displayRightError(); exit; }
     if ($configure && isset($_POST['save'])) {
         $ttl = filter_var($_POST['ttl'] ?? null, FILTER_VALIDATE_INT);
-        if ($ttl < 60 || $ttl > 1800 || !in_array($_POST['mode'] ?? '', ['strict','warning'], true)) {
+        $takeoverPolicy = $_POST['takeover_policy'] ?? PluginEditcontrolBridge::config()['takeover_policy'];
+        if ($ttl < 60 || $ttl > 1800 || !in_array($_POST['mode'] ?? '', ['strict','warning'], true) || !in_array($takeoverPolicy, ['editors','admins'], true)) {
             Session::addMessageAfterRedirect('Caducidad: entre 60 y 1800 segundos. Modo no válido.', false, ERROR);
         } else {
-            Config::setConfigurationValues('plugin:editcontrol', ['ttl'=>$ttl, 'mode'=>$_POST['mode']]);
+            Config::setConfigurationValues('plugin:editcontrol', ['ttl'=>$ttl, 'mode'=>$_POST['mode'], 'takeover_policy'=>$takeoverPolicy]);
             Session::addMessageAfterRedirect('Configuración guardada. Recargue las pestañas abiertas.', false, INFO);
         }
     } elseif ($configure && isset($_POST['rights'])) {
@@ -49,6 +50,10 @@ if ($configure) {
     echo '<label>Modo<select class="form-select" name="mode">';
     foreach (['warning'=>'Solo aviso', 'strict'=>'Bloqueo estricto'] as $v=>$label) {
         echo '<option value="' . $v . '"' . ($config['mode'] === $v ? ' selected' : '') . '>' . $label . '</option>';
+    }
+    echo '</select></label><label>Tomar control sin solicitud<select class="form-select" name="takeover_policy">';
+    foreach (['admins'=>'Solo administradores autorizados','editors'=>'Todos los técnicos con permiso de edición del ticket'] as $value=>$label) {
+        echo '<option value="'.$value.'"'.($config['takeover_policy']===$value?' selected':'').'>'.$label.'</option>';
     }
     echo '</select></label><p>El modo aviso permite guardar sin control y no evita conflictos. Cambiar el modo exige recargar las pestañas.</p><button class="btn btn-primary" name="save" value="1">Guardar</button></form>';
     echo '<form method="post" class="card card-body mb-4">'; $hidden();

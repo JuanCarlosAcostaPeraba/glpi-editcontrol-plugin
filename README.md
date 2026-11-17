@@ -1,10 +1,10 @@
-# Control de edición para GLPI — 0.2.0
+# Control de edición para GLPI — 0.3.0
 
 Primera versión experimental para impedir ediciones simultáneas de un ticket
 desde la interfaz central de GLPI. Repositorio independiente, rama `develop`.
 No modifica el núcleo de GLPI y no reutiliza sus tablas ObjectLock.
 
-**Estado: instalado en producción en modo solo aviso por indicación del usuario;
+**Estado: instalado en producción en modo estricto por indicación del usuario;
 pendiente de la prueba manual de dos técnicos y de validación integrada completa.**
 Compatibilidad objetivo: GLPI 11.x y 12.0.x, PHP 8.2 o posterior, MariaDB/MySQL
 con un único servidor de escritura y conexión con afinidad de sesión.
@@ -14,8 +14,10 @@ La versión de producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35.
 ## Uso
 
 Al abrir un ticket, la primera pestaña visible de un técnico con permiso UPDATE
-adquiere automáticamente el control. La barra muestra su nombre y ofrece solamente
-**Solicitar control** a otro técnico. Los perfiles de solo lectura nunca adquieren
+adquiere automáticamente el control. La barra muestra su nombre y ofrece
+**Solicitar control** a otro técnico. Con la política autorizada en el HUC, también
+puede **Tomar control** sin petición cualquier técnico con UPDATE en ese ticket.
+Los perfiles de solo lectura nunca adquieren
 el control. No se comparte el token entre pestañas, ni siquiera del mismo usuario.
 Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
 
@@ -33,8 +35,15 @@ su pestaña abierta. Ambos conservan sus borradores; ceder no guarda los cambios
 El propietario y quien espera consultan cambios cada ocho segundos cuando la
 pestaña está visible. Los observadores ven cuándo queda libre, sin depender
 del correo ni de las notificaciones nativas. No se envían notificaciones de escritorio.
-El permiso específico `plugin_editcontrol_admin` permite tomar el control y liberar
-bloqueos administrativos dentro de los tickets accesibles al perfil y entidad.
+El permiso específico `plugin_editcontrol_admin` conserva las liberaciones administrativas.
+La política de toma de control se configura entre administradores y todos los
+técnicos con permiso de edición. En producción se ha autorizado la segunda.
+La toma registra actor, propietario anterior y fecha, invalida el token anterior
+y exige que el propietario mostrado no haya cambiado antes del clic.
+
+En modo estricto, quienes no tienen el control ven la barra fucsia y el formulario
+en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
+escribir dentro del editor para mantener el control durante ediciones largas.
 
 Si el ticket cambia, caduca el control, se pierde la conexión o un administrador
 toma el control, **conservar el texto y recargar antes de continuar**. No hay
@@ -72,7 +81,11 @@ Véase `docs/PRODUCCION.md` para las comprobaciones y la desactivación.
 | Resolver o cerrar mediante actualización de Ticket | Validación previa y liberación tras éxito |
 | Creación de Ticket y elementos automáticos de esa creación | No necesita control previo; se reconoce el objeto nuevo en memoria |
 | API oficial, CLI y autoservicio | No necesitan token; incrementan la revisión e invalidan formularios centrales anteriores |
-| Actores, documentos, validaciones, relaciones, restauración, acciones de otros plugins y SQL directo | Sin cobertura completa; véase LIMITACIONES.md |
+| Técnicos, grupos, proveedores, activos, validaciones, satisfacción y costes | Protegidos por hooks de sus clases CommonDBTM |
+| Asociaciones Document_Item con Ticket | Protegidas; no se bloquean documentos de otros tipos de objetos |
+| Relaciones Ticket_Ticket | Se exige control del ticket de origen; otro ticket con control activo impide modificar la relación |
+| Restauración de tipos protegidos | Validación de control en pre_item_restore |
+| SQL directo, cascadas que evitan hooks y clases de terceros | Sin cobertura completa; véase LIMITACIONES.md |
 | Acciones masivas centrales sobre tipos protegidos | Rechazadas en estricto si no incluyen control válido por ticket |
 
 El plugin no sustituye las comprobaciones de permisos de GLPI. Para adquirir el
@@ -90,6 +103,8 @@ El modo **solo aviso permite guardar sin control** y no evita conflictos.
 - `docs/RESULTADOS.txt`: salida real de pruebas locales.
 - `tests/fixtures/bar.html` y `tests/ui-checks.js`: seis escenarios de navegador con respuestas simuladas.
 - `tests/ui-handoff.js`: cesión entre dos pestañas, sin navegación ni pérdida de borradores.
+- `tests/ui-takeover.js`: fucsia, contraste, solo lectura, toma de control y aviso al propietario anterior.
+- `tests/run-guards.php`: guardas centrales reales bajo CGI, con clases GLPI simuladas.
 - `docs/INVESTIGACION.md`: fuentes oficiales y decisión de arquitectura.
 - `docs/ACEPTACION.md`: doce escenarios para dos navegadores en GLPI 11 y 12.
 - `docs/MANTENIMIENTO.md`: actualización, desactivación, retirada y diagnóstico.

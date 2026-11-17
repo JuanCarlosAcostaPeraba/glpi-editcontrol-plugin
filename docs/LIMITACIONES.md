@@ -1,7 +1,8 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.2.0 es experimental. Se ha autorizado e instalado una prueba en
-producción en **solo aviso**. El bloqueo estricto sigue sin validación completa.
+La versión 0.3.0 es experimental. El usuario ha autorizado activar **bloqueo estricto**
+en producción y tomar control sin solicitud a técnicos con UPDATE del ticket.
+La matriz completa con técnicos y todas las personalizaciones sigue pendiente.
 
 1. Se instaló y activó en GLPI 11.0.4. Se verificaron esquema y GET_LOCK sobre
    MariaDB 11.8.3, carga del plugin y entrega del JavaScript. No se ejecutó la matriz
@@ -14,8 +15,9 @@ producción en **solo aviso**. El bloqueo estricto sigue sin validación complet
    tablas temporales en MariaDB real. Sigue pendiente la matriz completa del HUC.
 2. La producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35. La compatibilidad
    completa con GLPI 12 sigue pendiente. Esta entrega rechaza GLPI 10.
-3. El alcance se limita a las clases y hooks declarados en README. Documentos,
-   actores, validaciones, relaciones, restauración, escrituras SQL directas y plugins
+3. El alcance se limita a las clases y hooks declarados en README. Las asociaciones
+   de actores, activos y documentos, validaciones, satisfacción, costes, relaciones
+   y restauración ahora están registradas. Escrituras SQL directas, cascadas y plugins
    que evitan CommonDBTM no están protegidos completamente. Una integración que
    escriba SQL directamente puede modificar datos sin incrementar la revisión.
 4. El fingerprint del ticket detecta cambios de su fila; la revisión detecta cambios
@@ -47,12 +49,14 @@ producción en **solo aviso**. El bloqueo estricto sigue sin validación complet
    en una pestaña visible, también se detiene. Debe ajustarse el TTL al trabajo real.
 10. Los textos de formularios no se guardan como borradores. El rechazo del servidor
     usa el mecanismo de mensajes de GLPI: la recuperación de contenido depende del
-    formulario. Los campos pueden seguir siendo editables en consulta, pero sus
-    envíos protegidos se detienen en modo estricto. Probar editores enriquecidos,
+    formulario. Los controles y TinyMCE pasan a solo lectura sin perder su valor;
+    el servidor rechaza envíos sin control aunque se altere el navegador. Probar editores enriquecidos,
     AJAX, llamadas fetch y formularios aportados por terceros.
 11. El control requiere UPDATE del ticket; técnicos que solo pueden añadir tareas o
     seguimientos sin UPDATE necesitan una adaptación de permisos del endpoint.
     Las acciones masivas centrales protegidas se rechazan sin credenciales por ticket.
+    Formularios de planificación u otros plugins sin contexto de pestaña pueden
+    necesitar un adaptador; un rechazo exige abrir el ticket y adquirir control.
 12. Cambiar modo/TTL requiere recargar las pestañas. El servidor aplica la configuración
     actual; una barra antigua podría mostrar el modo anterior. Desactivar el plugin
     quita su protección. Un periodo de mantenimiento es obligatorio para actualizar.
@@ -71,3 +75,8 @@ producción en **solo aviso**. El bloqueo estricto sigue sin validación complet
 No utilizar esta versión como garantía absoluta de ausencia de sobrescrituras:
 esa garantía solo puede evaluarse para las rutas cubiertas tras validar la
 integración real y las personalizaciones instaladas en el HUC.
+
+Las integraciones por API oficial, CLI y autoservicio conservan su exención del token,
+como se pidió en el diseño inicial. Sus cambios invalidan las versiones centrales.
+Una toma de control no reescribe campos ni actualiza un formulario obsoleto: si hay
+cambios en base de datos, se exige conservar el texto y cargar los datos actuales.

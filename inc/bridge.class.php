@@ -8,7 +8,7 @@ final class PluginEditcontrolBridge {
     private static array $creationItems = [];
     private static array $baselines = [];
     public static function config(): array {
-        return Config::getConfigurationValues('plugin:editcontrol') + ['ttl'=>120, 'mode'=>'warning'];
+        return Config::getConfigurationValues('plugin:editcontrol') + ['ttl'=>120, 'mode'=>'warning', 'takeover_policy'=>'admins'];
     }
     public static function service(): PluginEditcontrolService {
         global $DB;
@@ -37,12 +37,40 @@ final class PluginEditcontrolBridge {
         return $_SESSION['plugin_editcontrol_nonce'] ??= bin2hex(random_bytes(32));
     }
     public static function admin(): bool { return Session::haveRight('plugin_editcontrol_admin', READ); }
+    public static function canTakeover($ticket, int $id): bool {
+        return Session::getCurrentInterface() === 'central' && $ticket->can($id, UPDATE)
+            && (self::config()['takeover_policy'] === 'editors' || self::admin() || Session::haveRight('config', UPDATE));
+    }
+    public static function ticketIds($item): array {
+        if ($item instanceof Ticket) { $ids = [(int)($item->fields['id'] ?? $item->input['id'] ?? 0)]; }
+        else {
+            // Existing children are always guarded using persisted parents, never a submitted replacement.
+            $f = !empty($item->fields['id']) ? $item->fields : (is_array($item->input) ? $item->input : []);
+            if (isset($f['tickets_id_1']) || isset($f['tickets_id_2'])) { $ids = [(int)($f['tickets_id_1'] ?? 0), (int)($f['tickets_id_2'] ?? 0)]; }
+            elseif (isset($f['tickets_id'])) { $ids = [(int)$f['tickets_id']]; }
+            else { $ids = ($f['itemtype'] ?? '') === 'Ticket' ? [(int)($f['items_id'] ?? 0)] : []; }
+        }
+        return array_values(array_unique(array_filter($ids, static fn($id)=>$id>0)));
+    }
     public static function ticketId($item): int {
-        if ($item instanceof Ticket) { return (int)($item->fields['id'] ?? $item->input['id'] ?? 0); }
-        // Existing children are always guarded using their persisted parent.
-        $f = !empty($item->fields['id']) ? $item->fields : (is_array($item->input) ? $item->input : []);
-        if ($item instanceof TicketTask) { return (int)($f['tickets_id'] ?? 0); }
-        return ($f['itemtype'] ?? '') === 'Ticket' ? (int)($f['items_id'] ?? 0) : 0;
+        $ids = self::ticketIds($item);
+        $context = (int)($_POST['_editcontrol_ticket'] ?? $_SERVER['HTTP_X_EDITCONTROL_TICKET'] ?? 0);
+        return in_array($context, $ids, true) ? $context : ($ids[0] ?? 0);
+    }
+    private static function protectRelated($item, int $primary): void {
+        $s = self::service();
+        $ids = self::ticketIds($item); sort($ids);
+        foreach ($ids as $id) {
+            if ($id === $primary || isset(self::$validated[$id])) { continue; }
+            $r = $s->expire($id);
+            if (self::interactive() && self::config()['mode'] === 'strict' && (int)$r['users_id'] > 0) {
+                throw new PluginEditcontrolConflict('El otro ticket relacionado está bloqueado. Solicite su control antes de cambiar la relación.');
+            }
+            // Native relation updates may update both tickets. The connection mutex
+            // protects the otherwise unowned target until the entire request ends.
+            $s->invalidate($id);
+            self::$validated[$id] = true;
+        }
     }
     public static function interactive(): bool {
         global $CFG_GLPI;
@@ -58,10 +86,11 @@ final class PluginEditcontrolBridge {
     }
     public static function guard($item): void {
         $id = self::ticketId($item);
-        if (!$id || isset(self::$validated[$id]) || !is_array($item->input)) { return; }
+        if (!$id || !is_array($item->input)) { return; }
         try {
+            if (isset(self::$validated[$id])) { self::protectRelated($item, $id); return; }
             if (!($item instanceof Ticket) && !empty($item->fields['id'])) {
-                foreach (['tickets_id','itemtype','items_id'] as $key) {
+                foreach (['tickets_id','tickets_id_1','tickets_id_2','itemtype','items_id'] as $key) {
                     if (isset($item->input[$key], $item->fields[$key]) && (string)$item->input[$key] !== (string)$item->fields[$key]) {
                         throw new PluginEditcontrolConflict('No se permite cambiar el ticket de un elemento existente.');
                     }
@@ -89,6 +118,7 @@ final class PluginEditcontrolBridge {
             // CommonDBTM loaded fields before the pre hook. Refresh under the mutex.
             if (!empty($item->fields['id'])) { $item->getFromDB((int)$item->fields['id']); }
             self::$validated[$id] = true;
+            self::protectRelated($item, $id);
         } catch (Throwable $e) {
             // Advisory mode must never stop a GLPI write, including infrastructure failures.
             if (self::config()['mode'] === 'strict') {
@@ -144,6 +174,7 @@ final class PluginEditcontrolBridge {
             $cfg = ['id'=>$id, 'baseline'=>$baseline, 'nonce'=>self::nonce(),
                 'csrf'=>Session::getNewCSRFToken(), 'mode'=>self::config()['mode'],
                 'canEdit'=>$item->can($id, UPDATE),
+                'canTakeover'=>self::canTakeover($item, $id),
                 'interval'=>max(15, (int)self::config()['ttl'] / 3), 'admin'=>self::admin(),
                 'pollInterval'=>8,
                 'url'=>Plugin::getWebDir('editcontrol') . '/ajax/lease.php'];

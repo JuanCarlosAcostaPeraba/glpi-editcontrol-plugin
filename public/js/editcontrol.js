@@ -8,8 +8,9 @@
     if (document.querySelector('[data-editcontrol-active]')) return;
     node.dataset.editcontrolActive = '1';
     let token = '', mine = false, changed = false, busy = false, stopped = false;
-    let requestToken = '', pendingRequestKey = '';
+    let requestToken = '', pendingRequestKey = '', generation = 0, lostControl = false;
     let lastActivity = Date.now(), lastHeartbeat = 0, lastPoll = 0;
+    const observedEditors = new WeakSet();
     const bar = document.createElement('section');
     const normalClass = 'alert alert-secondary d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
     bar.className = normalClass;
@@ -22,6 +23,10 @@
     const request = document.createElement('button');
     request.type = 'button'; request.className = 'btn btn-sm btn-outline-primary';
     request.textContent = 'Solicitar control'; request.hidden = true;
+    const takeover = document.createElement('button');
+    takeover.type = 'button'; takeover.className = 'btn btn-sm btn-outline-primary';
+    takeover.textContent = 'Tomar control'; takeover.hidden = true;
+    takeover.title = 'Tomar el control inmediatamente, sin esperar la aprobación del otro técnico.';
     const notice = document.createElement('div');
     notice.className = 'd-flex align-items-center flex-wrap gap-2 w-100';
     notice.setAttribute('role', 'alert'); notice.hidden = true;
@@ -30,31 +35,64 @@
     handoff.type = 'button'; handoff.className = 'btn btn-sm btn-primary';
     handoff.textContent = 'Ceder control'; handoff.hidden = true;
     notice.append(noticeText, handoff);
-    bar.append(msg, request, notice);
+    bar.append(msg, request, takeover, notice);
     (document.querySelector('main') || document.body).prepend(bar);
     const ticketForm = form => /(?:ticket|itilfollowup|tickettask|itilsolution)\.form\.php(?:$|[?\/])/.test(new URL(form.action, location.href).pathname)
-      || !!form.querySelector('[name="tickets_id"], [name="itemtype"][value="Ticket"]');
+      || !!form.querySelector('[name="tickets_id"], [name="tickets_id_1"], [name="tickets_id_2"], [name="itemtype"][value="Ticket"]');
     function fields() {
       document.querySelectorAll('form[method="post" i]').forEach(form => {
         if (bar.contains(form) || !ticketForm(form)) return;
-        for (const [name, value] of Object.entries({_editcontrol_token: token, _editcontrol_baseline: c.baseline})) {
+        for (const [name, value] of Object.entries({_editcontrol_token: token, _editcontrol_baseline: c.baseline, _editcontrol_ticket:String(c.id)})) {
           let hidden = form.querySelector(`input[name="${name}"]`);
           if (!hidden) { hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = name; form.append(hidden); }
           if (hidden.value !== value) hidden.value = value;
         }
-        form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(button => {
-          const block = c.mode === 'strict' && (!mine || changed);
-          if (block && !button.disabled) { button.dataset.editcontrolDisabled = '1'; button.disabled = true; }
-          if (!block && button.dataset.editcontrolDisabled) { button.disabled = false; delete button.dataset.editcontrolDisabled; }
+        const block = c.mode === 'strict' && (!mine || changed || !c.canEdit);
+        form.querySelectorAll('input:not([type="hidden"]):not([type="button"]), select, textarea, button[type="submit"], button:not([type])').forEach(control => {
+          const managed = !!control.dataset.editcontrolDisabled;
+          const editor = control.tagName === 'TEXTAREA' && control.id ? window.tinymce?.get(control.id) : null;
+          if (editor?.on && !observedEditors.has(editor)) {
+            editor.on('input keydown change focus', () => { lastActivity=Date.now(); });
+            observedEditors.add(editor);
+          }
+          const originalReadonlyEditor = !managed && editor?.mode?.get?.() === 'readonly';
+          if (block && !control.disabled) { control.dataset.editcontrolDisabled = '1'; control.disabled = true; }
+          if (!block && managed) { control.disabled = false; delete control.dataset.editcontrolDisabled; }
+          if (editor?.mode?.set) {
+            try {
+              if (block && control.dataset.editcontrolDisabled && !originalReadonlyEditor) {
+                editor.mode.set('readonly'); control.dataset.editcontrolEditorReadonly = '1';
+              } else if (!block && control.dataset.editcontrolEditorReadonly) {
+                editor.mode.set('design'); delete control.dataset.editcontrolEditorReadonly;
+              }
+            } catch { /* Editor initialization may still be in flight; server validation remains authoritative. */ }
+          }
+        });
+        form.querySelectorAll('[contenteditable]').forEach(editable => {
+          if (block && editable.getAttribute('contenteditable') === 'true') { editable.dataset.editcontrolEditable='1'; editable.setAttribute('contenteditable','false'); }
+          if (!block && editable.dataset.editcontrolEditable) { editable.setAttribute('contenteditable','true'); delete editable.dataset.editcontrolEditable; }
         });
       });
     }
     if (window.jQuery) window.jQuery.ajaxPrefilter((options, original, xhr) => {
-      if (new URL(options.url, location.href).origin === location.origin) {
+      if (node.isConnected && new URL(options.url, location.href).origin === location.origin) {
         xhr.setRequestHeader('X-Editcontrol-Token', token);
         xhr.setRequestHeader('X-Editcontrol-Baseline', c.baseline);
+        xhr.setRequestHeader('X-Editcontrol-Ticket', String(c.id));
       }
     });
+    const nativeFetch = window.fetch.editcontrolOriginal || window.fetch.bind(window);
+    const contextualFetch = (input, options = {}) => {
+      const url = new URL(input instanceof Request ? input.url : input, location.href);
+      if (!node.isConnected || url.origin !== location.origin) return nativeFetch(input, options);
+      const contextualHeaders = new Headers(options.headers || (input instanceof Request ? input.headers : undefined));
+      contextualHeaders.set('X-Editcontrol-Token', token);
+      contextualHeaders.set('X-Editcontrol-Baseline', c.baseline);
+      contextualHeaders.set('X-Editcontrol-Ticket', String(c.id));
+      return nativeFetch(input, {...options, headers:contextualHeaders});
+    };
+    contextualFetch.editcontrolOriginal = nativeFetch;
+    window.fetch = contextualFetch;
     document.addEventListener('submit', e => {
       if (c.mode === 'strict' && (!mine || changed) && e.target.method.toLowerCase() === 'post' && ticketForm(e.target)) {
         e.preventDefault(); e.stopImmediatePropagation();
@@ -67,7 +105,7 @@
     }
     function body(action, leaseToken = requestToken || token) {
       return new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token:leaseToken, baseline:c.baseline,
-        request_token:requestToken, request_key:pendingRequestKey, _glpi_csrf_token:c.csrf});
+        request_token:requestToken, request_key:pendingRequestKey, expected_generation:String(generation), _glpi_csrf_token:c.csrf});
     }
     function headers() {
       // GLPI 11 checks this HEADER (not the POST field) on XMLHttpRequest requests.
@@ -90,29 +128,39 @@
         const error = new Error(r.message || 'No se puede consultar la actividad del ticket.');
         error.status = res.status; throw error;
       }
-      if (r.token) { token = r.token; requestToken = ''; lastActivity = Date.now(); lastHeartbeat = Date.now(); }
+      if (r.mode) c.mode = r.mode;
+      if (typeof r.can_edit === 'boolean') c.canEdit = r.can_edit;
+      if (typeof r.can_takeover === 'boolean') c.canTakeover = r.can_takeover;
+      if (r.generation !== undefined) generation = r.generation;
+      if (r.token) { token = r.token; requestToken = ''; lostControl=false; lastActivity = Date.now(); lastHeartbeat = Date.now(); }
       if (r.mine && requestToken) {
         // The owner assigned directly to this tab's pre-registered request credential.
-        token = requestToken; requestToken = ''; lastHeartbeat = Date.now(); lastActivity = Date.now();
+        token = requestToken; requestToken = ''; lostControl=false; lastHeartbeat = Date.now(); lastActivity = Date.now();
       }
       if (action === 'heartbeat') lastHeartbeat = Date.now();
       return r;
     }
     function render(r) {
       const lost = mine && !r.mine;
-      mine = r.mine; changed = changed || r.changed || lost;
+      if (lost) lostControl=true;
+      mine = r.mine; changed = changed || r.changed;
       bar.className = normalClass;
       if (r.owner) {
-        msg.textContent = `${r.owner}${mine ? ' (tú)' : r.same_user ? ' (otra pestaña)' : ''} está usando este ticket.`;
+        msg.textContent = c.mode === 'strict' && !mine
+          ? `Ticket bloqueado por ${r.owner}${r.same_user ? ' (otra pestaña)' : ''}. Puedes consultarlo o solicitar el control.`
+          : `${r.owner}${mine ? ' (tú)' : r.same_user ? ' (otra pestaña)' : ''} está usando este ticket.`;
       } else {
         msg.textContent = 'Ningún técnico está usando este ticket.';
       }
       if (changed) msg.textContent += ' El ticket se ha actualizado; conserve su texto antes de actualizar la página.';
+      else if (lostControl && !mine) msg.textContent += ' Ya no tienes el control; tu texto sigue en esta pestaña.';
       const time = value => new Date(value * 1000).toLocaleString();
       bar.title = r.owner ? `Desde ${time(r.started)}. Última actividad: ${time(r.heartbeat)}.` : '';
       request.hidden = !c.canEdit || mine || r.available;
       request.disabled = !!r.requested_by_me;
       request.textContent = r.requested_by_me ? 'Solicitud enviada' : 'Solicitar control';
+      takeover.hidden = !c.canTakeover || mine || (r.available && !lostControl);
+      takeover.disabled = changed;
       pendingRequestKey = mine ? (r.request_key || '') : '';
       notice.hidden = !mine || !r.requester_name;
       const message = r.requester_name ? `${r.requester_name} solicita el control de este ticket.` : '';
@@ -121,12 +169,14 @@
       handoff.disabled = false;
       handoff.setAttribute('aria-label', `Ceder control a ${r.requester_name || 'otro técnico'}`);
       if (!notice.hidden) bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
+      if (c.mode === 'strict' && r.owner && !mine) bar.classList.add('editcontrol-blocked');
       fields();
     }
     function fail(error) {
       // A temporary outage does not discard the token, allowing later heartbeats to recover.
       request.hidden = true;
       handoff.hidden = true;
+      takeover.hidden = true;
       msg.textContent = error.name === 'TypeError' || error.name === 'TimeoutError'
         ? 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.' : error.message;
       bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
@@ -146,10 +196,17 @@
       try {
         const r = await call('handoff');
         // This is a deliberate handoff, not a stale-form event. Preserve all draft fields.
-        token = ''; mine = false; requestToken = '';
+        token = ''; mine = false; requestToken = ''; lostControl=true;
         render(r);
         msg.textContent += ' Has cedido el control.';
       } catch (error) { fail(error); }
+      finally { busy = false; }
+    };
+    takeover.onclick = async () => {
+      if (busy || !c.canTakeover || changed) return;
+      busy = true; takeover.disabled = true;
+      try { render(await call('takeover')); }
+      catch (error) { fail(error); }
       finally { busy = false; }
     };
     async function poll(force = false) {
@@ -166,10 +223,12 @@
         try { r = await call(mine && active && !changed && heartbeatDue ? 'heartbeat' : 'status'); }
         catch (error) {
           if (error.status !== 409) throw error;
+          lostControl=true;
           r = await call('status');
         }
         // The first eligible visible tab acquires automatically. Readers never acquire.
-        if (r.available && c.canEdit && active && !changed && !r.changed) {
+        if (mine && !r.mine) lostControl=true;
+        if (r.available && c.canEdit && active && !changed && !r.changed && !lostControl) {
           try { r = await call('acquire'); }
           catch (error) {
             if (error.status !== 409) throw error;

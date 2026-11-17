@@ -24,8 +24,11 @@ try {
         throw new RuntimeException('Acción no válida', 400);
     }
     if ($action !== 'status' && !$ticket->can($id, UPDATE)) { throw new RuntimeException('Sin permiso de edición', 403); }
-    if (in_array($action, ['takeover','force_release'], true) && !PluginEditcontrolBridge::admin()) {
+    if ($action === 'force_release' && !PluginEditcontrolBridge::admin()) {
         throw new RuntimeException('Se requiere el permiso específico de administración', 403);
+    }
+    if ($action === 'takeover' && !PluginEditcontrolBridge::canTakeover($ticket, $id)) {
+        throw new RuntimeException('Su perfil no permite tomar el control de este ticket', 403);
     }
     $s = PluginEditcontrolBridge::service();
     $s->lock($id);
@@ -36,7 +39,12 @@ try {
     $out = [];
     switch ($action) {
         case 'acquire': case 'takeover':
-            $token = $s->acquire($id, $user, session_id(), $baseline, $action === 'takeover');
+            $expected = null;
+            if ($action === 'takeover') {
+                $expected = filter_var($_POST['expected_generation'] ?? null, FILTER_VALIDATE_INT);
+                if ($expected === false || $expected < 0) { throw new RuntimeException('Actualice el estado antes de tomar el control', 400); }
+            }
+            $token = $s->acquire($id, $user, session_id(), $baseline, $action === 'takeover', $expected);
             $out['token'] = $token; break;
         case 'heartbeat': $s->heartbeat($id, $user, $token, session_id()); break;
         case 'release': $s->release($id, $user, $token, session_id()); break;
@@ -63,6 +71,8 @@ try {
     $out += ['ok'=>true, 'owner'=>$name, 'started'=>(int)$row['started'], 'heartbeat'=>(int)$row['heartbeat'],
         'expires'=>(int)$row['expires'], 'available'=>!(int)$row['users_id'],
         'mine'=>$mine, 'same_user'=>(int)$row['users_id'] === $user,
+        'generation'=>(int)$row['generation'], 'mode'=>PluginEditcontrolBridge::config()['mode'],
+        'can_edit'=>$ticket->can($id, UPDATE), 'can_takeover'=>PluginEditcontrolBridge::canTakeover($ticket, $id),
         'requester'=>(int)$row['requester'], 'requester_name'=>$requesterName,
         'request_key'=>$mine ? $row['requester_token_hash'] : '',
         'requested_by_me'=>$requestToken !== '' ? $s->requestedBy($row, $user, $requestToken, session_id()) : (int)$row['requester'] === $user,

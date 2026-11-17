@@ -15,7 +15,7 @@ async (page) => {
       text:document.querySelector('[role=status]').textContent,
       buttons:[...document.querySelector('[aria-label="Actividad del ticket"]').querySelectorAll('button')].filter(b=>!b.hidden&&b.getClientRects().length).map(b=>b.textContent),
       actions:fixture.calls.map(c=>c.action),
-      secure:fixture.calls.every(c=>c.headers['X-Glpi-Csrf-Token']==='test-csrf'),
+      secure:fixture.calls.every(c=>new Headers(c.headers).get('X-Glpi-Csrf-Token')==='test-csrf'),
       release:fixture.calls.some(c=>c.action==='release'&&c.keepalive),
       overflow:document.documentElement.scrollWidth>innerWidth
     }));

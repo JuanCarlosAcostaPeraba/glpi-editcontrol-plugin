@@ -85,7 +85,7 @@ conflict(fn()=>$s->validateWrite(3,10,$oldOwner,'owner-session',$handoffBase,tru
 $s->heartbeat(3,20,$requestB,'requester-session');
 check((int)$db->pdo->query("SELECT COUNT(*) FROM glpi_plugin_editcontrol_events WHERE tickets_id=3 AND event='handoff_received' AND users_id=20 AND previous_users_id=10")->fetchColumn()===1, 'Historial registra cedente y receptor');
 $s->request(3,30,$requestC,'third-session');
-$db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET requested=UNIX_TIMESTAMP()-59 WHERE tickets_id=3');
+$db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET requested=UNIX_TIMESTAMP()-30 WHERE tickets_id=3');
 $lastRequested = (int)$s->row(3)['requested'];
 $s->refreshRequest(3,30,$requestC,'wrong-session');
 check((int)$s->row(3)['requested']===$lastRequested, 'Sesión distinta no mantiene una solicitud abandonada');
@@ -95,6 +95,12 @@ $keyC = $s->row(3)['requester_token_hash'];
 $db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET requested=UNIX_TIMESTAMP()-61 WHERE tickets_id=3');
 conflict(fn()=>$s->handoff(3,20,$requestB,'requester-session',$keyC), 'Solicitud abandonada caduca y no recibe la cesión');
 check($s->owns($s->row(3),20,$requestB,'requester-session'), 'Caducar una solicitud no quita el control al propietario');
+$expectedGeneration=(int)$s->row(3)['generation'];
+$forced=$s->acquire(3,30,'third-session',$handoffBase,true,$expectedGeneration);
+check($s->owns($s->row(3),30,$forced,'third-session'), 'Toma de control sin solicitud entrega una credencial nueva');
+conflict(fn()=>$s->validateWrite(3,20,$requestB,'requester-session',$handoffBase,true), 'Propietario anterior no guarda después de robar el control');
+conflict(fn()=>$s->acquire(3,40,'fourth-session',$handoffBase,true,$expectedGeneration), 'No se roba a un propietario distinto del mostrado al pulsar');
+check((int)$db->pdo->query("SELECT COUNT(*) FROM glpi_plugin_editcontrol_events WHERE tickets_id=3 AND event='takeover' AND users_id=30 AND previous_users_id=20")->fetchColumn()===1, 'Historial de robo identifica actor y propietario anterior');
 $s->unlockAll();
 // Actual independent PHP processes race over one row. MySQL uses real GET_LOCK.
 $cmd = [PHP_BINARY, '-d', 'extension_dir=' . ini_get('extension_dir')];

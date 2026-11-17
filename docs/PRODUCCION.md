@@ -7,8 +7,8 @@ un compañero. No se crearon tickets de prueba ni se activó el bloqueo estricto
 Estado final:
 
 - GLPI 11.0.4; PHP 8.2.35; MariaDB 11.8.3.
-- Plugin 0.2.0 instalado y activado por la consola oficial, ejecutada como usuario apache.
-- Modo `warning` (solo aviso), TTL 120 segundos.
+- Plugin 0.3.0 instalado y activado por la consola oficial, ejecutada como usuario apache.
+- Modo `strict`, toma de control `editors`, TTL 120 segundos.
 - ObjectLock nativo ya estaba desactivado; no se cambió esa configuración.
 - Código del plugin separado del núcleo, sin modificar archivos centrales.
 - Copia previa de metadatos y de la versión inicial instalada fuera del directorio web.
@@ -74,6 +74,33 @@ el protocolo nuevo. Después, avisos y cesiones no recargan la página ni sus fo
 
 En modo aviso los guardados siguen permitidos. Esta prueba no valida todavía
 el rechazo de escrituras ni certifica todos los casos de concurrencia.
+
+## Actualización del 17 de noviembre: bloqueo estricto y recuperación
+
+El usuario autorizó explícitamente el modo estricto y confirmó que todos los
+técnicos con permiso de edición del ticket pueden tomar el control sin solicitarlo.
+La barra de quienes no son propietarios es fucsia, con contraste blanco 5,16:1.
+Tomar control conserva borradores, sustituye el token y registra la operación.
+Una generación distinta a la mostrada rechaza el clic para evitar robar a un
+propietario que acaba de cambiar inadvertidamente.
+
+Se añadieron guardas para técnicos, grupos, proveedores, activos, asociaciones de
+documentos, validaciones, satisfacción, costes, relaciones y restauración. Una
+relación entre tickets no se modifica si el otro está bajo control de otra pestaña.
+El contexto se transmite también en fetch y formularios ordinarios, además de jQuery.
+Las API oficiales, CLI y autoservicio siguen su política de integración documentada.
+
+Los campos del técnico que pierde el control pasan a solo lectura, conservando el
+texto. Su pestaña no vuelve a adquirirlo automáticamente después de perderlo.
+Los navegadores que permanecen abiertos con una versión anterior deben cargar la
+actualización una vez; el servidor aplica estricto desde su activación.
+
+Estado verificado: 0.3.0 activa, schema_version=2, mode=strict,
+takeover_policy=editors y TTL 120. GLPI, JavaScript y CSS responden HTTP 200.
+Pasaron 52 comprobaciones de servicio, 17 guardas CGI y los 12 escenarios de
+navegador. En MariaDB real se verificaron robo sin solicitud, escritura del
+propietario y rechazo de token anterior/generación obsoleta usando exclusivamente
+tablas temporales en una conexión independiente.
 
 ## Desactivación inmediata
 

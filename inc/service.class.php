@@ -81,8 +81,11 @@ final class PluginEditcontrolService {
             && hash_equals($r['token_hash'], hash('sha256', $token))
             && hash_equals($r['session_hash'], hash('sha256', $session));
     }
-    public function acquire(int $id, int $user, string $session, string $baseline, bool $force = false): string {
+    public function acquire(int $id, int $user, string $session, string $baseline, bool $force = false, ?int $expectedGeneration = null): string {
         $r = $this->expire($id);
+        if ($force && $expectedGeneration !== null && (int)$r['generation'] !== $expectedGeneration) {
+            throw new PluginEditcontrolConflict('El control ha cambiado de técnico. Compruebe el aviso antes de tomarlo.');
+        }
         if (!hash_equals($this->snapshot($id), $baseline)) {
             throw new PluginEditcontrolConflict('El ticket ha cambiado. Recargue antes de editar.');
         }

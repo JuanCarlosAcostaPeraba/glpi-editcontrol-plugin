@@ -1,0 +1,20 @@
+/* The blocked state is intentionally fuchsia, in both GLPI themes. */
+.editcontrol-blocked {
+  background-color: #c026a6 !important;
+  border-color: #c026a6 !important;
+  color: #fff !important;
+}
+.editcontrol-blocked .btn {
+  color: #fff;
+  background-color: transparent;
+  border-color: #fff;
+}
+.editcontrol-blocked .btn:hover:not(:disabled) {
+  color: #861978;
+  background-color: #fff;
+  border-color: #fff;
+}
+.editcontrol-blocked .btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}

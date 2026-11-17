@@ -4,22 +4,27 @@
 <style>
   body{margin:0;background:#191b1f;color:#eee;font:14px system-ui,sans-serif}main{max-width:1100px;margin:24px auto}.alert{background:#252830;border:1px solid #454a55;border-radius:6px}.alert-warning{background:#403617;color:#fff3cd}.d-flex{display:flex}.align-items-center{align-items:center}.flex-wrap{flex-wrap:wrap}.gap-2{gap:8px}.m-3{margin:16px}.py-2{padding-top:8px;padding-bottom:8px}.px-3{padding-left:16px;padding-right:16px}.mb-0{margin:0}.flex-grow-1{flex-grow:1}.btn{font:inherit;padding:6px 10px;border-radius:4px;background:transparent;border:1px solid #83afff;color:#c8dcff;cursor:pointer}.btn:hover{background:#303c50}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}.btn:disabled{opacity:.65;cursor:default}[hidden]{display:none!important}
 </style>
-<main><div class="editcontrol-bootstrap"></div><form method="post" action="https://example.test/front/ticket.form.php"><textarea name="content">Borrador sin guardar</textarea><button type="submit">Guardar</button></form></main>
+<link rel="stylesheet" href="../../public/css/editcontrol.css">
+<main><div class="editcontrol-bootstrap"></div><form method="post" action="https://example.test/front/ticket.form.php"><textarea id="fixture-content" name="content">Borrador sin guardar</textarea><button type="submit">Guardar</button></form></main>
 <script>
   const scenario = new URL(location.href).searchParams.get('scenario') || 'owner';
   const actor = new URL(location.href).searchParams.get('actor') || 'A';
-  const cfg = {id:1,baseline:'current',nonce:scenario==='linked'?actor:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',mode:scenario==='linked'?'strict':'warning',interval:40,pollInterval:8,url:scenario==='linked'?location.origin+'/lease':'https://example.test/lease'};
+  const strictScenario=['strict','takeover-denied','takeover-race','mode-switch'].includes(scenario);
+  const linked=['linked','linked-takeover'].includes(scenario);
+  const cfg = {id:1,baseline:'current',nonce:linked?actor:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',canTakeover:scenario==='linked-takeover'||strictScenario&&scenario!=='takeover-denied',mode:linked||strictScenario&&scenario!=='mode-switch'?'strict':'warning',interval:40,pollInterval:8,url:linked?location.origin+'/lease':'https://example.test/lease'};
   document.querySelector('.editcontrol-bootstrap').dataset.config=JSON.stringify(cfg);
-  window.fixture = {calls:[], interval:null, scenario, failed:false, elapsed:0};
+  window.fixture = {calls:[], interval:null, scenario, failed:false, elapsed:0, editorMode:'design'};
+  window.tinymce={get:id=>id==='fixture-content'?{mode:{get:()=>fixture.editorMode,set:mode=>{fixture.editorMode=mode;}}}:null};
   const realNow=Date.now(); Date.now=()=>realNow+fixture.elapsed;
   const actualInterval=window.setInterval;
   window.setInterval=(fn,delay)=>{fixture.interval=fn;fixture.delay=delay;return 1;};
-  let owner = scenario === 'owner' || scenario === 'reader' || scenario === 'html' || scenario === 'race' ? 'Ana Pérez' : '';
+  let owner = scenario === 'owner' || scenario === 'reader' || scenario === 'html' || scenario === 'race' || strictScenario ? 'Ana Pérez' : '';
+  let generation=1;
   let mine=false, requested=false, firstStatus=true;
-  if(scenario!=='linked')window.fetch=async(url,options)=>{
+  if(!linked)window.fetch=async(url,options)=>{
     const action=options.body.get('action');
-    fixture.calls.push({action,headers:options.headers,keepalive:!!options.keepalive});
-    if(options.headers['X-Glpi-Csrf-Token']!=='test-csrf') throw new Error('Missing CSRF header');
+    fixture.calls.push({action,headers:Object.fromEntries(new Headers(options.headers).entries()),keepalive:!!options.keepalive});
+    if(new Headers(options.headers).get('X-Glpi-Csrf-Token')!=='test-csrf') throw new Error('Missing CSRF header');
     if(scenario==='recover'&&!fixture.failed){fixture.failed=true;throw new TypeError('Failed to fetch');}
     if(scenario==='html') return {ok:false,status:403,redirected:false,headers:new Headers({'content-type':'text/html'}),json:async()=>{throw new Error('Must never parse HTML as JSON');}};
     if(scenario==='race'&&firstStatus&&action==='status'){owner='';firstStatus=false;}
@@ -27,10 +32,15 @@
       owner='Ana Pérez';return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'Otro técnico tiene el control.'})};
     }
     if(action==='acquire'){owner='Luis García';mine=true;}
+    if(action==='takeover'){
+      if(scenario==='takeover-race'){owner='Clara';generation++;return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'El control ha cambiado de técnico.'})};}
+      if(Number(options.body.get('expected_generation'))!==generation)throw new Error('Generation mismatch');
+      owner='Luis García';mine=true;generation++;
+    }
     if(action==='request') requested=true;
     if(action==='release'){owner='';mine=false;}
-    const r={ok:true,owner,mine,available:!owner,changed:false,started:1794837600,heartbeat:1794837600,same_user:false,requester_name:'',requested_by_me:requested,csrf:'test-csrf'};
-    if(action==='acquire')r.token='test-token';
+    const r={ok:true,owner,mine,generation,mode:strictScenario?'strict':cfg.mode,can_edit:cfg.canEdit,can_takeover:cfg.canTakeover,available:!owner,changed:false,started:1794837600,heartbeat:1794837600,same_user:false,requester_name:'',requested_by_me:requested,csrf:'test-csrf'};
+    if(action==='acquire'||action==='takeover')r.token='test-token';
     return {ok:true,status:200,headers:new Headers({'content-type':'application/json'}),json:async()=>r};
   };
 </script>

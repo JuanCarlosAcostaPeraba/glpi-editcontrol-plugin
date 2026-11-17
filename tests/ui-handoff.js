@@ -27,7 +27,8 @@ async (page) => {
   await other.goto(target+'B');
   await other.getByRole('button',{name:'Solicitar control',exact:true}).click();
   await other.getByRole('button',{name:'Solicitud enviada',exact:true}).waitFor();
-  await other.locator('textarea').fill('Borrador de Luis sin guardar');
+  if (!await other.locator('textarea').isDisabled()) throw new Error('Non-owner textarea is editable');
+  await other.locator('textarea').evaluate(node=>{node.value='Borrador de Luis sin guardar';});
   await page.bringToFront();
   await page.evaluate(async()=>{fixture.elapsed+=8000;await fixture.interval();});
   await page.getByRole('alert').filter({hasText:'Luis García solicita'}).waitFor();
