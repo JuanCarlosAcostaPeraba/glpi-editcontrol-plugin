@@ -5,6 +5,15 @@ pérdida de control por inactividad y editor de tareas bloqueado en un ticket gr
 0.3.1 contiene las correcciones, pendientes de repetir la prueba en los tickets
 afectados antes de reactivar. El estado desactivado se conserva durante la actualización.
 
+Estado comprobado de 0.3.1: instalada, no activada (state=4), esquema 2,
+modo strict, toma editors y timeout de solicitudes 120 segundos. No se activó el
+plugin, no se reiniciaron servicios ni se modificaron tickets reales. Se conserva
+copia privada del código anterior y de la configuración/tablas propias del plugin.
+
+Prueba adicional en MariaDB real, solo con tablas temporales en conexión independiente:
+propiedad conservada tras simular un día sin heartbeat, heartbeat sin reintroducir
+caducidad, cesión, toma explícita y rechazo de token/generación anteriores: OK.
+
 ## Registro de la prueba inicial de 0.3.0
 
 El 17 de noviembre de 2026 el responsable confirmó que 0.3.0 funciona correctamente

@@ -8,7 +8,9 @@ readonly nativo, indicador flotante (hover/clic/teclado) y ancho 360 px: OK.
 Recuperación de ticket libre sin permiso de toma a otro propietario: OK.
 Detección mecánica de interfaz: sin hallazgos; revisión visual de escritorio/móvil.
 No se crearon ni modificaron tickets reales en las pruebas automatizadas.
-El plugin sigue desactivado en producción.
+0.3.1 instalada y desactivada en producción (state=4), sin reiniciar servicios.
+MariaDB real con tablas temporales: propiedad tras un día sin heartbeat, cesión,
+toma explícita y rechazo de token/generación anteriores: OK.
 
 PASS: API REST reconocida por ruta exacta
 PASS: API con GLPI en subdirectorio

@@ -1,7 +1,7 @@
 # Edit Control for GLPI
 
 [![Checks](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml/badge.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml)
-[![Release](https://img.shields.io/github/v/release/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/latest)
+[![Release](https://img.shields.io/badge/Release-0.3.1%20candidate-orange)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.1)
 [![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](LICENSE)
 
 **0.3.1 — corrective release candidate; integrated retest pending.**
@@ -10,7 +10,7 @@ Coordinate ticket editing in GLPI: see who has control, request it, hand it over
 or take it directly when your permissions and the configured policy allow it.
 
 **[Documentación en español](docs/README.es.md)** ·
-[Download](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/latest) ·
+[Download](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.1) ·
 [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/issues)
 
 ![Strict mode: blocked technicians can request or take control](docs/images/strict-mode.png)
