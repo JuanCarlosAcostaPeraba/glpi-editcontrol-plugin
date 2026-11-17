@@ -1,18 +1,12 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.3.0 es experimental. El usuario ha autorizado activar **bloqueo estricto**
-en producción y tomar control sin solicitud a técnicos con UPDATE del ticket.
-La matriz completa con técnicos y todas las personalizaciones sigue pendiente.
+La versión 0.3.0 fue validada por dos técnicos en producción en GLPI 11.0.4.
+La matriz completa de operaciones, perfiles y personalizaciones sigue pendiente.
 
-1. Se instaló y activó en GLPI 11.0.4. Se verificaron esquema y GET_LOCK sobre
-   MariaDB 11.8.3, carga del plugin y entrega del JavaScript. No se ejecutó la matriz
-   con técnicos reales ni una instalación en GLPI 12. Las pruebas PHP locales usan un adaptador SQLite con
-   GET_LOCK simulado mediante flock. No prueban el SQL MariaDB ni el funcionamiento
-   real de sus mutex, CSRF del núcleo, hooks, derechos o selección de formularios.
-   Otros seis escenarios de navegador comprueban el JavaScript con respuestas
-   ficticias, incluidas cabecera CSRF y recuperación de una caída temporal.
-   La cesión 0.2.0 también se verificó con dos pestañas y backend simulado, y con
-   tablas temporales en MariaDB real. Sigue pendiente la matriz completa del HUC.
+1. Se verificaron esquema y GET_LOCK en MariaDB 11.8.3 y escenarios aislados con
+   tablas temporales. Los 52 controles de servicio usan SQLite y mutex simulado;
+   los 17 escenarios CGI usan clases simuladas y los 12 escenarios de navegador
+   usan respuestas ficticias. No sustituyen la matriz integrada en GLPI.
 2. La producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35. La compatibilidad
    completa con GLPI 12 sigue pendiente. Esta entrega rechaza GLPI 10.
 3. El alcance se limita a las clases y hooks declarados en README. Las asociaciones

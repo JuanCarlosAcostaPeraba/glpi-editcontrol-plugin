@@ -1,0 +1,11 @@
+name: Feature request / Propuesta
+description: Suggest an improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and proposed behavior
+      description: Describe the workflow and permissions involved. Español o English.
+    validations:
+      required: true

@@ -1,0 +1,25 @@
+name: Bug report / Error
+description: Report a reproducible problem with fictitious data.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Security issues: use private reporting. No real ticket data, credentials or tokens. Español o English."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and configuration
+      description: Plugin, GLPI, PHP, database, browser, mode, takeover policy and other plugins.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction, expected and actual behavior
+      description: Use fictitious tickets and describe both technicians' actions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots

@@ -1,117 +1,95 @@
-# Control de edición para GLPI — 0.3.0
+# Edit Control for GLPI
 
-Primera versión experimental para impedir ediciones simultáneas de un ticket
-desde la interfaz central de GLPI. Repositorio independiente, rama `develop`.
-No modifica el núcleo de GLPI y no reutiliza sus tablas ObjectLock.
+[![Checks](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml/badge.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml)
+[![Release](https://img.shields.io/github/v/release/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/latest)
+[![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](LICENSE)
 
-**Estado: instalado en producción en modo estricto por indicación del usuario;
-pendiente de la prueba manual de dos técnicos y de validación integrada completa.**
-Compatibilidad objetivo: GLPI 11.x y 12.0.x, PHP 8.2 o posterior, MariaDB/MySQL
-con un único servidor de escritura y conexión con afinidad de sesión.
-No se declara compatibilidad con GLPI 10 ni con versiones futuras no probadas.
-La versión de producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35.
+Coordinate ticket editing in GLPI: see who has control, request it, hand it over,
+or take it directly when your permissions and the configured policy allow it.
 
-## Uso
+**[Documentación en español](docs/README.es.md)** ·
+[Download](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/latest) ·
+[Changelog](CHANGELOG.md) · [Report an issue](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/issues)
 
-Al abrir un ticket, la primera pestaña visible de un técnico con permiso UPDATE
-adquiere automáticamente el control. La barra muestra su nombre y ofrece
-**Solicitar control** a otro técnico. Con la política autorizada en el HUC, también
-puede **Tomar control** sin petición cualquier técnico con UPDATE en ese ticket.
-Los perfiles de solo lectura nunca adquieren
-el control. No se comparte el token entre pestañas, ni siquiera del mismo usuario.
-Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
+![Strict mode: blocked technicians can request or take control](docs/images/strict-mode.png)
 
-Al salir del ticket, se intenta liberar el control automáticamente. Tras un guardado protegido con éxito,
-incluidos seguimiento, tarea o solución, el servidor intenta liberarlo al finalizar
-la petición. Si este paso falla, la caducidad sigue siendo obligatoria. Una pestaña
-cerrada o abandonada deja de renovar; el bloqueo vence sin depender de cron.
-Una pestaña oculta no renueva. Una visible sin interacción deja de renovar tras
-tres minutos. El control vence después del último heartbeat más el TTL configurado.
+*Actual plugin JavaScript and CSS with fictitious users and a simulated server.*
 
-Un técnico puede **Solicitar control**. El propietario recibe un aviso en la barra
-con **Ceder control** y puede entregarlo directamente a la pestaña solicitante,
-sin salir del ticket ni recargar formularios. El compañero recibe el control en
-su pestaña abierta. Ambos conservan sus borradores; ceder no guarda los cambios.
-El propietario y quien espera consultan cambios cada ocho segundos cuando la
-pestaña está visible. Los observadores ven cuándo queda libre, sin depender
-del correo ni de las notificaciones nativas. No se envían notificaciones de escritorio.
-El permiso específico `plugin_editcontrol_admin` conserva las liberaciones administrativas.
-La política de toma de control se configura entre administradores y todos los
-técnicos con permiso de edición. En producción se ha autorizado la segunda.
-La toma registra actor, propietario anterior y fecha, invalida el token anterior
-y exige que el propietario mostrado no haya cambiado antes del clic.
+## Features
 
-En modo estricto, quienes no tienen el control ven la barra fucsia y el formulario
-en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
-escribir dentro del editor para mantener el control durante ediciones largas.
+- Automatic control acquisition by the first eligible visible ticket tab.
+- Current technician displayed in the ticket, with request and inline handoff.
+- Strict mode: other technicians can read and request control; protected writes require the owning tab's credentials.
+- Fuchsia alert and read-only fields for blocked technicians; drafts remain when control changes.
+- Configurable direct takeover: authorized administrators, or all technicians allowed to edit that ticket.
+- Expiring leases, activity heartbeats and audit history.
+- Independent plugin tables, no GLPI core modifications and no email dependency.
 
-Si el ticket cambia, caduca el control, se pierde la conexión o un administrador
-toma el control, **conservar el texto y recargar antes de continuar**. No hay
-mezcla automática de borradores ni recuperación de texto garantizada al redirigir GLPI.
+## Compatibility
 
-## Instalación en pruebas
-
-1. Respaldar archivos y base de datos del GLPI de pruebas.
-2. Descomprimir el paquete: su carpeta superior debe llamarse `editcontrol`.
-3. Copiarla a `GLPI/plugins/editcontrol` (o al directorio marketplace administrado
-   por GLPI). No renombrarla. El proceso web necesita lectura, no escritura en el plugin.
-4. Desactivar ObjectLock nativo para `Ticket`. El plugin rechaza esa coexistencia
-   durante la comprobación de requisitos.
-5. En Configuración → Complementos, instalar y activar **Control de edición**.
-6. Abrir su configuración desde la lista de complementos. Por defecto funciona
-   en **solo aviso**, con caducidad de 120 segundos.
-7. Con un perfil autorizado para configurar GLPI, conceder el permiso específico
-   de administración a los perfiles elegidos. Renovar sesión/perfil para aplicar derechos.
-8. Completar primero las pruebas del modo aviso. Activar **bloqueo estricto** y
-   recargar todas las pestañas para realizar la matriz de aceptación.
-
-El 16 de noviembre de 2026 se instaló y activó el plugin en gise.huc.es, en solo aviso
-y con TTL 120 segundos, por autorización expresa del usuario. No se crearon ni
-modificaron tickets de prueba. No se ha desplegado en gisepre.huc.es.
-Véase `docs/PRODUCCION.md` para las comprobaciones y la desactivación.
-
-## Alcance de protección
-
-| Operación | Tratamiento en esta versión |
+| Component | Verified environment |
 |---|---|
-| Actualizar, eliminar o purgar Ticket mediante CommonDBTM | Validación de control y versión en modo estricto |
-| Añadir, actualizar, eliminar o purgar ITILFollowup de Ticket | Mismo control exclusivo del ticket |
-| Añadir, actualizar, eliminar o purgar TicketTask | Mismo control exclusivo del ticket |
-| Añadir, actualizar, eliminar o purgar ITILSolution de Ticket | Mismo control exclusivo del ticket |
-| Resolver o cerrar mediante actualización de Ticket | Validación previa y liberación tras éxito |
-| Creación de Ticket y elementos automáticos de esa creación | No necesita control previo; se reconoce el objeto nuevo en memoria |
-| API oficial, CLI y autoservicio | No necesitan token; incrementan la revisión e invalidan formularios centrales anteriores |
-| Técnicos, grupos, proveedores, activos, validaciones, satisfacción y costes | Protegidos por hooks de sus clases CommonDBTM |
-| Asociaciones Document_Item con Ticket | Protegidas; no se bloquean documentos de otros tipos de objetos |
-| Relaciones Ticket_Ticket | Se exige control del ticket de origen; otro ticket con control activo impide modificar la relación |
-| Restauración de tipos protegidos | Validación de control en pre_item_restore |
-| SQL directo, cascadas que evitan hooks y clases de terceros | Sin cobertura completa; véase LIMITACIONES.md |
-| Acciones masivas centrales sobre tipos protegidos | Rechazadas en estricto si no incluyen control válido por ticket |
+| GLPI | **11.0.4** |
+| PHP | **8.2.35** (production), 8.5.6 (local tests) |
+| Database | MariaDB **11.8.3**, single writer with session affinity |
+| Interface language | Spanish |
 
-El plugin no sustituye las comprobaciones de permisos de GLPI. Para adquirir el
-control esta versión requiere permiso UPDATE sobre el ticket. Perfiles con derecho
-a añadir seguimientos pero sin UPDATE necesitan una adaptación antes de usar estricto.
-Otros formularios o plugins pueden necesitar transmitir token y versión: en estricto,
-las escrituras protegidas sin estos datos se rechazan en el servidor.
+Version 0.3.0 was validated by two technicians in production on 17 November 2026.
+This confirms their tested workflow, not every operation or customization.
+The existing runtime accepts GLPI 11 and 12; **GLPI 12 is unverified**. Catalog
+metadata deliberately limits distribution to the verified GLPI 11.0.4 version.
+GLPI 10 is unsupported. Broader support requires integrated testing.
 
-El modo **solo aviso permite guardar sin control** y no evita conflictos.
+## Installation
 
-## Pruebas y entregables
+1. Back up GLPI files and database.
+2. Download `editcontrol-0.3.0.tar.gz` or `.zip` from the release and verify its SHA-256 checksum.
+3. Extract into GLPI's `plugins` directory. The path must be `plugins/editcontrol/setup.php`.
+4. Disable native ObjectLock for Ticket; the plugin refuses that coexistence.
+5. Install and enable **Control de edición** in Setup → Plugins.
+6. Open its configuration. Fresh installs default to **warning mode**, a 120-second lease and administrators-only direct takeover.
+7. Validate your workflows, then select strict mode and the desired takeover policy.
+8. Reload existing ticket tabs once after an update, preserving unsaved text first.
 
-- `tests/run.php`: reglas de control, sesiones, versión obsoleta y ocho procesos concurrentes.
-- `tests/README.md`: ejecución con modelo SQLite y con MariaDB/MySQL reales.
-- `docs/RESULTADOS.txt`: salida real de pruebas locales.
-- `tests/fixtures/bar.html` y `tests/ui-checks.js`: seis escenarios de navegador con respuestas simuladas.
-- `tests/ui-handoff.js`: cesión entre dos pestañas, sin navegación ni pérdida de borradores.
-- `tests/ui-takeover.js`: fucsia, contraste, solo lectura, toma de control y aviso al propietario anterior.
-- `tests/run-guards.php`: guardas centrales reales bajo CGI, con clases GLPI simuladas.
-- `docs/INVESTIGACION.md`: fuentes oficiales y decisión de arquitectura.
-- `docs/ACEPTACION.md`: doce escenarios para dos navegadores en GLPI 11 y 12.
-- `docs/MANTENIMIENTO.md`: actualización, desactivación, retirada y diagnóstico.
-- `docs/LIMITACIONES.md`: riesgos, cobertura y condiciones previas de uso.
+Use the release asset; GitHub's automatic source archives have the repository's
+directory name and cannot be extracted directly into GLPI as an installable plugin.
 
-Ejecutar `python tools/package.py` para crear el paquete instalable en `dist/`.
-El nombre de carpeta dentro del ZIP siempre es `editcontrol`.
+To update, deactivate the plugin, replace its files, run GLPI's installation/update
+action and reactivate. Back up both files and database first. See [maintenance](docs/MANTENIMIENTO.md).
 
-Repositorio: https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin
-Los cambios se desarrollan en `develop` y se integran en `main`.
+## Protection boundaries
+
+Strict mode covers central-interface CommonDBTM hooks for Ticket, followups,
+tasks, solutions, actors, linked assets/documents, validations, satisfaction,
+costs, ticket relationships and restoration. GLPI permissions remain mandatory.
+Acquiring control requires UPDATE permission on the ticket.
+
+Official API, CLI and self-service writes do not require the browser token; they
+invalidate the revision of central-interface forms. Direct SQL, third-party
+classes and cascades bypassing hooks are not fully covered. Bulk actions without
+per-ticket credentials are rejected in strict mode. Warning mode allows writes
+without control. Read the [known limitations](docs/LIMITACIONES.md) before deployment.
+
+## Development and validation
+
+```sh
+php -d extension=pdo_sqlite tests/run.php
+php tests/run-guards.php  # requires php-cgi and pdo_sqlite
+node --check public/js/editcontrol.js
+python tools/package.py
+python tools/validate-release.py
+```
+
+Service/concurrency and CGI guard suites complement 12 browser fixture scenarios.
+[Test instructions](tests/README.md) distinguish simulations from integrated checks.
+
+## Community and distribution
+
+[Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Security policy](SECURITY.md) ·
+[Marketplace checklist](docs/MARKETPLACE.md)
+
+Independent community plugin. Catalog registration and Marketplace approval are
+pending. The checklist records remaining technical work, including GLPI database
+abstraction and Twig templates.
+
+**Author:** Juan Carlos Acosta Perabá. **License:** [GPL-3.0-or-later](LICENSE).

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <name>Edit Control</name>
+  <key>editcontrol</key>
+  <state>stable</state>
+  <logo>https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/main/editcontrol.png</logo>
+  <description>
+    <short>
+      <en>Coordinate ticket editing with exclusive control, inline handoff and configurable takeover.</en>
+      <es>Edición coordinada de tickets con control exclusivo, cesión directa y toma configurable.</es>
+    </short>
+    <long>
+      <en>See who controls a ticket, request control and hand it over without reloading. Strict mode shows a fuchsia read-only alert. Direct takeover can be allowed for administrators or all ticket editors. Expiring leases and audit history. Spanish interface. Validated on GLPI 11.0.4; see README for scope and integration exemptions. Independent community plugin; Marketplace approval pending.</en>
+      <es>Muestra quién controla el ticket y permite solicitarlo o cederlo sin recargar. En modo estricto los demás ven un aviso fucsia y solo pueden consultar. La toma directa se configura para administradores o todos los editores. Incluye caducidad e historial. Interfaz en español. Validado en GLPI 11.0.4; consulta alcance y exenciones en README. Plugin comunitario pendiente de aprobación del Marketplace.</es>
+    </long>
+  </description>
+  <homepage>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin</homepage>
+  <download>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases</download>
+  <issues>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/issues</issues>
+  <readme>https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/main/README.md</readme>
+  <authors><author>Juan Carlos Acosta Perabá</author></authors>
+  <versions><version>
+    <num>0.3.0</num>
+    <compatibility>11.0.4</compatibility>
+    <download_url>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/download/0.3.0/editcontrol-0.3.0.tar.gz</download_url>
+  </version></versions>
+  <langs><lang>es_ES</lang></langs>
+  <license>GPLv3+</license>
+  <tags>
+    <en><tag>tickets</tag><tag>concurrency</tag><tag>locking</tag></en>
+    <es><tag>tickets</tag><tag>concurrencia</tag><tag>bloqueo</tag></es>
+  </tags>
+  <screenshots><screenshot>https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/main/docs/images/strict-mode.png</screenshot></screenshots>
+</root>

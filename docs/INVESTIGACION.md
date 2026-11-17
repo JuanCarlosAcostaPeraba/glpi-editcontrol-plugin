@@ -1,26 +1,9 @@
 # Investigación y decisión técnica
 
-Fecha: 16 de noviembre de 2026. Este documento distingue observaciones del código
-de fallos cuya causa solo se puede confirmar en el servidor del HUC.
-
-Actualización tras autorizar acceso SSH: producción confirmada como GLPI 11.0.4,
-PHP 8.2.35 y MariaDB 11.8.3. ObjectLock nativo está desactivado. Se instaló el plugin
-0.1.2 en modo aviso; la prueba de dos técnicos queda a cargo del usuario.
-Las observaciones siguientes sobre falta de versión se refieren a la primera
-investigación sin acceso SSH.
-
-## Entorno observado
-
-- Repositorio local `dev/glpi`: describe `11.0.6-229-g1fc3916e55`, marcador
-  `version/11.0.7`. No equivale a comprobar producción.
-- Repositorio local `dev/glpi-pre`: commit `6eb5895`, marcador `version/11.0.4`.
-  No equivale a comprobar el servidor de preproducción indicado como GLPI 12.
-- gise.huc.es y gisepre.huc.es: accesibles por HTTPS desde este equipo sin login.
-  La página pública no identifica inequívocamente la versión. No se accedió a
-  configuración privada, base de datos ni credenciales de esos servidores.
-- Referencia oficial consultada para GLPI 12: etiqueta `12.0.2`.
-- El intento de indexar el núcleo con codebase-memory-mcp caducó tras 300 segundos;
-  se continuó con lectura dirigida del código local y referencias oficiales.
+Investigación inicial: 16 de noviembre de 2026.
+La validación posterior se realizó en GLPI 11.0.4 / PHP 8.2.35 / MariaDB 11.8.3.
+Inspeccionar código de otras versiones no acredita compatibilidad integrada.
+Véanse README y PRODUCCION.md para el estado actual.
 
 ## ObjectLock
 
@@ -36,7 +19,7 @@ estado. `cronUnlockObject` elimina bloqueos antiguos en función de un plazo en 
 
 Estas dependencias explican riesgos de bloqueo olvidado si falla la petición de
 salida y no actúa la tarea periódica. No se han reproducido los fallos históricos
-del HUC ni se atribuyen a un defecto concreto del núcleo. Para diagnosticarlos se
+del entorno inicial ni se atribuyen a un defecto concreto del núcleo. Para diagnosticarlos se
 necesitarían versión desplegada, configuración, registros y una reproducción.
 
 Fuentes primarias:
