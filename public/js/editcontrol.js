@@ -87,8 +87,9 @@
           dock.hidden = false;
         } else {
           pinned = false;
-          if (panel.contains(document.activeElement)) anchor.append(bar);
+          const restoreFocus = dock.contains(document.activeElement);
           openPanel(false); dock.hidden = true; anchor.style.minHeight = '';
+          if (restoreFocus) { bar.tabIndex = -1; bar.focus({preventScroll:true}); }
         }
       }, {rootMargin:'-72px 0px 0px 0px'}).observe(anchor);
     }
