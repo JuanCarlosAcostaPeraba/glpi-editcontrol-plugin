@@ -65,10 +65,9 @@ final class PluginEditcontrolService {
     public function expire(int $id): array {
         $this->lock($id);
         $r = $this->row($id);
-        if ((int)$r['users_id'] > 0 && (int)$r['expires'] <= $this->now()) {
-            $this->clear($id, 0, 'expired');
-            $r = $this->row($id);
-        }
+        // Ownership is persistent: suspended browsers and idle/locked PCs must
+        // not lose control. Recovery is explicit takeover or administrative release.
+        // Keep request expiry independent of ownership (including legacy rows).
         if ((int)$r['requester'] > 0 && (int)$r['requested'] <= $this->now() - $this->ttl) {
             $this->q("UPDATE glpi_plugin_editcontrol_leases SET requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
             $r = $this->row($id);
@@ -77,7 +76,6 @@ final class PluginEditcontrolService {
     }
     public function owns(array $r, int $user, string $token, string $session): bool {
         return $token !== '' && (int)$r['users_id'] === $user && $user > 0
-            && (int)$r['expires'] > $this->now()
             && hash_equals($r['token_hash'], hash('sha256', $token))
             && hash_equals($r['session_hash'], hash('sha256', $session));
     }
@@ -93,14 +91,14 @@ final class PluginEditcontrolService {
         $token = bin2hex(random_bytes(32));
         $hash = $this->quote(hash('sha256', $token));
         $session = $this->quote(hash('sha256', $session));
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
         $this->event($id, $user, $force ? 'takeover' : 'acquired', (int)$r['users_id']);
         return $token;
     }
     public function heartbeat(int $id, int $user, string $token, string $session): void {
         $r = $this->expire($id);
         if (!$this->owns($r, $user, $token, $session)) { throw new PluginEditcontrolConflict('Ha perdido el control. Conserve el texto y recargue.'); }
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET heartbeat=UNIX_TIMESTAMP(),expires=0 WHERE tickets_id=$id");
     }
     public function clear(int $id, int $actor, string $reason): void {
         $this->lock($id);
@@ -150,7 +148,7 @@ final class PluginEditcontrolService {
         $targetTokenHash = $this->quote($r['requester_token_hash']);
         $targetSessionHash = $this->quote($r['requester_session_hash']);
         // Never expose a free interval: assign directly to the requesting tab under the same mutex.
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1,users_id=$target,token_hash=$targetTokenHash,session_hash=$targetSessionHash,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1,users_id=$target,token_hash=$targetTokenHash,session_hash=$targetSessionHash,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
         $this->event($id, $user, 'handoff_sent');
         $this->event($id, $target, 'handoff_received', $user);
     }

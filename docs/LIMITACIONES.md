@@ -1,7 +1,9 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.3.0 fue validada por dos técnicos en producción en GLPI 11.0.4.
-La matriz completa de operaciones, perfiles y personalizaciones sigue pendiente.
+La versión 0.3.1 corrige problemas notificados después de una prueba inicial de
+0.3.0. El plugin permanece desactivado y queda pendiente repetir la prueba integrada
+en los tickets afectados. La matriz completa de perfiles y personalizaciones no
+está certificada.
 
 1. Se verificaron esquema y GET_LOCK en MariaDB 11.8.3 y escenarios aislados con
    tablas temporales. Los 52 controles de servicio usan SQLite y mutex simulado;
@@ -39,8 +41,10 @@ La matriz completa de operaciones, perfiles y personalizaciones sigue pendiente.
    El propietario solo puede ceder a la solicitud que está viendo: una sustitución
    concurrente obliga a comprobar el nuevo aviso. La solicitud caduca tras TTL sin
    renovarse; una pestaña cerrada no puede retener una cesión permanentemente.
-9. Al ocultar una pestaña se detiene la renovación. Tras tres minutos sin interacción
-   en una pestaña visible, también se detiene. Debe ajustarse el TTL al trabajo real.
+9. El control ya no caduca por inactividad ni por ocultar o suspender la pestaña.
+   Si el navegador termina sin liberar, el control permanece hasta una toma explícita
+   o liberación administrativa. La configuración de toma debe permitir la recuperación
+   operativa. El servidor sigue exigiendo sesión válida y permisos de GLPI.
 10. Los textos de formularios no se guardan como borradores. El rechazo del servidor
     usa el mecanismo de mensajes de GLPI: la recuperación de contenido depende del
     formulario. Los controles y TinyMCE pasan a solo lectura sin perder su valor;
@@ -54,14 +58,14 @@ La matriz completa de operaciones, perfiles y personalizaciones sigue pendiente.
 12. Cambiar modo/TTL requiere recargar las pestañas. El servidor aplica la configuración
     actual; una barra antigua podría mostrar el modo anterior. Desactivar el plugin
     quita su protección. Un periodo de mantenimiento es obligatorio para actualizar.
-13. Desactivar conserva tablas y tokens hasta su vencimiento. Tras una reactivación
-    inmediata podrían existir leases aún vigentes; esperar el TTL máximo anterior
-    y recargar antes de reanudar. No se promete protección con el plugin inactivo.
+13. Desactivar conserva tablas y tokens. Los controles persistentes no desaparecen
+    por esperar: revisarlos y liberarlos cuando corresponda antes de reactivar;
+    recargar todos los formularios. No hay protección con el plugin inactivo.
 14. Los paneles muestran como máximo 200 filas candidatas recientes, filtradas por
     accesibilidad después de obtenerlas. No son un inventario paginado completo.
     El historial crece sin retención automática; definir y ejecutar una política local.
 15. Si falla el registro de un evento o la liberación final, la operación puede
-    informar error o mantener el lease hasta el TTL. El modo aviso deja continuar
+    informar error o conservar el control hasta una toma o liberación. El modo aviso deja continuar
     los guardados cuando falla la comprobación; el modo estricto los rechaza.
     No se garantiza auditoría
     transaccional completa ante caída de SQL. Nunca se registran tokens en el historial.

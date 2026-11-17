@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.1] — 2026-11-17 (corrective candidate)
+
+- Keep control indefinitely when idle, hidden or suspended; abandoned ownership is recovered explicitly.
+- Keep request timeout independent of ownership; support legacy lease rows without expiring their owner.
+- Restore delayed task editors correctly and preserve native readonly restrictions.
+- Batch form discovery and avoid repeating TinyMCE mode changes on large timelines.
+- Compact off-screen status with hover, click, keyboard and touch access to the same actions.
+- Recover a free, unchanged ticket without requiring takeover permission.
+- Real TinyMCE 7.9.2 regression checks on a 300-task timeline and two tabs.
+- Production remains deactivated pending integrated retest.
+
 ## [0.3.0] — 2026-11-17
 
 ### Added

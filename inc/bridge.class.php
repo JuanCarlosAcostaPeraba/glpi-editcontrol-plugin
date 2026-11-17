@@ -26,7 +26,7 @@ final class PluginEditcontrolBridge {
                 }
             }
         } catch (Throwable $e) {
-            // Lease expiry is the fallback if session/DB has already been closed.
+            // Explicit takeover recovers ownership if the best-effort release fails.
             Toolbox::logInFile('editcontrol', 'Shutdown: ' . $e->getMessage() . "\n");
         } finally {
             try { self::$service?->unlockAll(); }

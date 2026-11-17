@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Regresión de tareas — datos ficticios</title>
+<style>
+body{margin:0;background:#f4f6fa;color:#1d273b;font:14px system-ui,sans-serif}main{max-width:1080px;margin:16px auto;padding:0 16px}.alert{background:#fff;border:1px solid #bbc1cc;border-radius:6px}.alert-warning{background:#fff0c2;color:#573500}.d-flex{display:flex}.align-items-center{align-items:center}.flex-wrap{flex-wrap:wrap}.gap-2{gap:8px}.m-3{margin:16px}.py-2{padding-block:8px}.px-3{padding-inline:16px}.mb-0{margin:0}.flex-grow-1{flex-grow:1}.btn,button{font:inherit;padding:8px 12px;border-radius:4px;cursor:pointer}.btn{border:1px solid currentColor;background:transparent}.task{padding:16px 0;border-bottom:1px solid #dce1e8}form{padding:12px 0}[hidden]{display:none!important}textarea{width:100%;min-height:100px}
+</style>
+<link rel="stylesheet" href="../../public/css/editcontrol.css">
+<script src="../results/tinymce/tinymce.min.js"></script>
+<main>
+<h1>Ticket de demostración</h1>
+<p>Datos ficticios para reproducir tareas cargadas con retraso y tickets largos.</p>
+<div class="editcontrol-bootstrap"></div>
+<div id="timeline"></div>
+<button type="button" id="new-task">Nueva tarea</button>
+</main>
+<script>
+const params = new URL(location.href).searchParams;
+const actor = params.get('actor') || 'A';
+const cfg = {id:1,baseline:'current',nonce:actor,csrf:'test-csrf',canEdit:true,canTakeover:true,mode:'strict',interval:40,pollInterval:8,url:location.origin+'/lease'};
+document.querySelector('.editcontrol-bootstrap').dataset.config=JSON.stringify(cfg);
+window.fixture={poll:null,elapsed:0};
+const actualNow=Date.now, actualInterval=window.setInterval;
+Date.now=()=>actualNow()+fixture.elapsed;
+window.setInterval=(fn,delay,...args)=>{if(fn.name==='poll'){fixture.poll=fn;return 0;}return actualInterval(fn,delay,...args);};
+window.tinymce_editor_configs={};
+document.querySelector('#timeline').innerHTML=Array.from({length:300},(_,i)=>`<article class="task"><strong>Tarea ficticia ${i+1}</strong><p>Contenido de demostración. Sin datos personales.</p></article>`).join('');
+window.createTask = async (nativeReadonly = false) => {
+  const id = 'task-' + document.querySelectorAll('textarea').length;
+  const form=document.createElement('form');form.method='post';form.action='/front/tickettask.form.php';
+  form.innerHTML=`<input type="hidden" name="tickets_id" value="1"><textarea id="${id}" name="content">Borrador sin guardar</textarea><button type="submit">Guardar tarea</button>`;
+  document.querySelector('main').append(form);
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  const config={target:document.getElementById(id),license_key:'gpl',base_url:'/tests/results/tinymce',suffix:'.min',menubar:false,plugins:[],toolbar:'bold italic',height:220,readonly:nativeReadonly};
+  tinymce_editor_configs[id]=config;
+  await tinymce.init(config);
+  return id;
+};
+document.querySelector('#new-task').onclick=()=>createTask();
+</script>
+<script src="../../public/js/editcontrol.js"></script>
+</html>

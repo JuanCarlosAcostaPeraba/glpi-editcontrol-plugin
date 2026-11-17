@@ -36,7 +36,7 @@ Fuentes primarias:
 | Alternativa | Ventajas | Costes y riesgos |
 |---|---|---|
 | Reutilizar ObjectLock | Interfaz existente, derechos y mantenimiento del núcleo | Comparte sus condiciones de liberación/notificación; extenderlo no garantiza fencing por pestaña ni control de versión |
-| Plugin independiente | TTL y heartbeat propios, token por pestaña, revisión monotónica, mensajes internos | Más código y pruebas; requiere cubrir explícitamente cada ruta de escritura y revisar hooks al actualizar GLPI |
+| Plugin independiente | Control persistente y heartbeat propio, token por pestaña, revisión monotónica, mensajes internos | Más código y pruebas; requiere cubrir explícitamente cada ruta de escritura y revisar hooks al actualizar GLPI |
 
 Se elige un plugin independiente, sin sobrescribir clases ni editar archivos del
 núcleo, con alcance inicial limitado y declarado. Es una decisión para controlar
@@ -61,10 +61,11 @@ escritura fallida puede exigir recargar. Se prefiere un rechazo conservador a ac
 un formulario obsoleto. El token nuevo hace inválido al anterior después de tomar
 el control. El contador de generación queda disponible para diagnóstico.
 
-El vencimiento usa el reloj de la base de datos. Un heartbeat tardío nunca
-resucita el token vencido. No se necesita cron para recuperar un ticket: la
-siguiente operación detecta y limpia la caducidad. Los mutex de conexión los
-libera el servidor SQL al perder la conexión. No equivalen al bloqueo de usuario.
+Desde 0.3.1 el propietario no caduca por tiempo: la suspensión del navegador no
+puede invalidar su control. El heartbeat registra presencia; la recuperación de un
+control abandonado se realiza mediante toma explícita o liberación administrativa.
+Las solicitudes sin respuesta sí caducan usando el reloj SQL. Los mutex SQL de
+conexión se liberan al perder la conexión y son distintos del control persistente.
 
 La inserción de la fila usa ON DUPLICATE KEY UPDATE sin cambios en vez de INSERT
 IGNORE: el segundo generaba avisos por clave duplicada en el registro de GLPI.

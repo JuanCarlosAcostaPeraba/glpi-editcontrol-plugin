@@ -46,7 +46,7 @@ $hidden = static function () use ($escape) {
 echo '<main class="container my-4"><h1>Control de edición</h1>';
 if ($configure) {
     echo '<form method="post" class="card card-body mb-4">'; $hidden();
-    echo '<label>Caducidad del control (segundos)<input class="form-control" name="ttl" type="number" min="60" max="1800" value="' . (int)$config['ttl'] . '"></label>';
+    echo '<label>Caducidad de solicitudes sin respuesta (segundos)<input class="form-control" name="ttl" type="number" min="60" max="1800" value="' . (int)$config['ttl'] . '"></label><p>El control del ticket no caduca por inactividad. Otro técnico autorizado puede tomarlo.</p>';
     echo '<label>Modo<select class="form-select" name="mode">';
     foreach (['warning'=>'Solo aviso', 'strict'=>'Bloqueo estricto'] as $v=>$label) {
         echo '<option value="' . $v . '"' . ($config['mode'] === $v ? ' selected' : '') . '>' . $label . '</option>';
@@ -63,13 +63,13 @@ if ($configure) {
     }
     echo '</select></label><label><input type="checkbox" name="grant"> Permitir toma de control y liberación administrativa</label><button class="btn btn-primary" name="rights" value="1">Actualizar permiso</button></form>';
 }
-echo '<h2>Bloqueos activos</h2><p>Solo se muestran tickets accesibles en el perfil y las entidades actuales. Los bloqueos caducados nunca impiden adquirir el control.</p><table class="table"><thead><tr><th>Ticket</th><th>Técnico</th><th>Inicio</th><th>Actividad</th><th>Caduca</th><th>Acción</th></tr></thead><tbody>';
-foreach ($DB->request(['FROM'=>'glpi_plugin_editcontrol_leases', 'WHERE'=>['expires'=>['>',time()], 'users_id'=>['>',0]], 'ORDER'=>'expires', 'LIMIT'=>200]) as $r) {
+echo '<h2>Bloqueos activos</h2><p>Solo se muestran tickets accesibles en el perfil y las entidades actuales. El control se conserva hasta salir, cederlo o tomarlo otro técnico.</p><table class="table"><thead><tr><th>Ticket</th><th>Técnico</th><th>Inicio</th><th>Actividad</th><th>Acción</th></tr></thead><tbody>';
+foreach ($DB->request(['FROM'=>'glpi_plugin_editcontrol_leases', 'WHERE'=>['users_id'=>['>',0]], 'ORDER'=>'started', 'LIMIT'=>200]) as $r) {
     $id = (int)$r['tickets_id']; $t = new Ticket();
     if (!$t->can($id, READ)) { continue; }
     $u = new User(); $u->getFromDB((int)$r['users_id']);
     echo '<tr><td>' . $id . '</td><td>' . $escape($u->getName()) . '</td>';
-    foreach (['started','heartbeat','expires'] as $field) { echo '<td>' . $escape(date('Y-m-d H:i:s', (int)$r[$field])) . '</td>'; }
+    foreach (['started','heartbeat'] as $field) { echo '<td>' . $escape(date('Y-m-d H:i:s', (int)$r[$field])) . '</td>'; }
     echo '<td>';
     if (PluginEditcontrolBridge::admin() && $t->can($id, UPDATE)) {
         echo '<form method="post">'; $hidden(); echo '<button class="btn btn-warning" name="unlock" value="' . $id . '">Liberar</button></form>';

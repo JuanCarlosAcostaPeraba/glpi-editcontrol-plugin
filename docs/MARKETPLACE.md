@@ -5,7 +5,7 @@ Prepared 17 November 2026. **Not yet submitted or approved.**
 ## Prepared
 
 - Public GPL-3.0-or-later repository and author attribution.
-- Release 0.3.0: ZIP and tar.gz with a single `editcontrol/` root and SHA-256 checksums.
+- Release 0.3.1 candidate: ZIP and tar.gz with a single `editcontrol/` root and SHA-256 checksums.
 - `editcontrol.xml`: English/Spanish descriptions, verified compatibility and download links.
 - 40 × 40 logo and screenshot using fictitious fixture data.
 - README, changelog, community files, issue templates and CI.
@@ -16,6 +16,8 @@ Raw catalog metadata:
 https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/main/editcontrol.xml
 
 ## Technical work before Marketplace review
+
+- Retest 0.3.1 on the affected production tickets before promoting the corrective candidate.
 
 - Replace general-purpose raw SQL with GLPI database abstraction. The current
   lease service uses raw queries; GLPI 11 publication guidance requires framework
@@ -29,7 +31,7 @@ https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin
 - Internationalize UI strings before advertising interface languages beyond Spanish.
 
 Runtime metadata predates publication and accepts GLPI 11/12. The catalog offers
-0.3.0 only for **11.0.4**, the verified version. Harmonize runtime requirements in
+0.3.1 only for **11.0.4**, the verified version. Harmonize runtime requirements in
 a subsequent tested release. This preparation does not change production code.
 
 ## Submission
@@ -49,7 +51,7 @@ Subject: Marketplace review request — Edit Control (editcontrol)
 Hello GLPI team,
 
 I would like to request Marketplace review for Edit Control, a community plugin
-for coordinating ticket editing with expiring leases, inline handoff and configurable
+for coordinating ticket editing with persistent control, inline handoff and configurable
 takeover. Author: Juan Carlos Acosta Perabá.
 
 Repository: https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin

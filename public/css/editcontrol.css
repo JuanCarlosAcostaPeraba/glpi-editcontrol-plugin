@@ -18,3 +18,73 @@
   outline: 3px solid #fff;
   outline-offset: 3px;
 }
+
+/* A single compact control follows long tickets; the existing bar moves into
+   its panel, so there is one live message and one set of actions. */
+.editcontrol-anchor { display: flow-root; }
+.editcontrol-dock {
+  position: fixed;
+  inset-inline-end: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  font: inherit;
+  color: var(--tblr-body-color, #1d273b);
+}
+.editcontrol-dock[hidden], .editcontrol-panel[hidden] { display: none !important; }
+.editcontrol-summary {
+  max-width: min(240px, calc(100vw - 40px));
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid currentColor;
+  border-radius: 20px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: inherit;
+  background: var(--tblr-body-bg, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.editcontrol-summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.editcontrol-dock-blocked .editcontrol-summary {
+  color: #fff;
+  background: #c026a6;
+  border-color: #c026a6;
+}
+.editcontrol-dock-notice .editcontrol-summary {
+  color: #573500;
+  background: #fff0c2;
+  border-color: #573500;
+}
+.editcontrol-summary:focus-visible, .editcontrol-close:focus-visible {
+  outline: 3px solid #c026a6;
+  outline-offset: 3px;
+}
+.editcontrol-panel {
+  width: min(440px, calc(100vw - 40px));
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  border-radius: 8px;
+  background: var(--tblr-body-bg, #fff);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 24%);
+}
+.editcontrol-panel > section { margin: 0 !important; border-radius: 0; overflow-wrap: anywhere; }
+.editcontrol-close {
+  display: block;
+  margin: 6px 8px 6px auto;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.editcontrol-close:hover { text-decoration: underline; text-underline-offset: 3px; }

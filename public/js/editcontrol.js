@@ -8,9 +8,15 @@
     if (document.querySelector('[data-editcontrol-active]')) return;
     node.dataset.editcontrolActive = '1';
     let token = '', mine = false, changed = false, busy = false, stopped = false;
-    let requestToken = '', pendingRequestKey = '', generation = 0, lostControl = false;
-    let lastActivity = Date.now(), lastHeartbeat = 0, lastPoll = 0;
+    let requestToken = '', pendingRequestKey = '', generation = 0, lostControl = false, available = false;
+    let lastHeartbeat = 0, lastPoll = 0;
     const observedEditors = new WeakSet();
+    let fieldsScheduled = false;
+    const scheduleFields = () => {
+      if (fieldsScheduled) return;
+      fieldsScheduled = true;
+      queueMicrotask(() => { fieldsScheduled = false; if (node.isConnected) fields(); });
+    };
     const bar = document.createElement('section');
     const normalClass = 'alert alert-secondary d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
     bar.className = normalClass;
@@ -36,7 +42,56 @@
     handoff.textContent = 'Ceder control'; handoff.hidden = true;
     notice.append(noticeText, handoff);
     bar.append(msg, request, takeover, notice);
-    (document.querySelector('main') || document.body).prepend(bar);
+    const anchor = document.createElement('div');
+    anchor.className = 'editcontrol-anchor';
+    anchor.append(bar);
+    (document.querySelector('main') || document.body).prepend(anchor);
+    const dock = document.createElement('aside');
+    dock.className = 'editcontrol-dock'; dock.hidden = true;
+    dock.setAttribute('aria-label', 'Control del ticket');
+    const dockButton = document.createElement('button');
+    dockButton.type = 'button'; dockButton.className = 'editcontrol-summary';
+    dockButton.textContent = 'Control del ticket';
+    dockButton.setAttribute('aria-expanded', 'false');
+    const panel = document.createElement('div');
+    panel.id = `editcontrol-panel-${c.id}`; panel.className = 'editcontrol-panel'; panel.hidden = true;
+    dockButton.setAttribute('aria-controls', panel.id);
+    const close = document.createElement('button');
+    close.type = 'button'; close.className = 'editcontrol-close'; close.textContent = 'Cerrar';
+    close.setAttribute('aria-label', 'Cerrar actividad del ticket');
+    panel.append(close); dock.append(panel, dockButton); document.body.append(dock);
+    let pinned = false, suppressFocus = false;
+    function openPanel(open) {
+      if (open && dock.hidden) return;
+      panel.hidden = !open;
+      dockButton.setAttribute('aria-expanded', String(open));
+      if (open && bar.parentElement !== panel) panel.append(bar);
+      else if (!open && bar.parentElement !== anchor) anchor.append(bar);
+    }
+    dockButton.addEventListener('click', () => { pinned = !pinned; openPanel(pinned); });
+    dock.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') openPanel(true); });
+    dock.addEventListener('pointerleave', () => { if (!pinned && !dock.contains(document.activeElement)) openPanel(false); });
+    dock.addEventListener('focusin', () => { if (!suppressFocus) openPanel(true); });
+    dock.addEventListener('focusout', event => { if (!pinned && !dock.contains(event.relatedTarget)) openPanel(false); });
+    const closePanel = () => {
+      pinned = false; suppressFocus = true; dockButton.focus(); suppressFocus = false; openPanel(false);
+    };
+    close.onclick = closePanel;
+    dock.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closePanel(); } });
+    document.addEventListener('pointerdown', event => { if (!dock.contains(event.target)) { pinned = false; openPanel(false); } });
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(entries => {
+        const entry = entries[0];
+        if (!entry.isIntersecting) {
+          anchor.style.minHeight = `${Math.max(anchor.offsetHeight, bar.offsetHeight)}px`;
+          dock.hidden = false;
+        } else {
+          pinned = false;
+          if (panel.contains(document.activeElement)) anchor.append(bar);
+          openPanel(false); dock.hidden = true; anchor.style.minHeight = '';
+        }
+      }, {rootMargin:'-72px 0px 0px 0px'}).observe(anchor);
+    }
     const ticketForm = form => /(?:ticket|itilfollowup|tickettask|itilsolution)\.form\.php(?:$|[?\/])/.test(new URL(form.action, location.href).pathname)
       || !!form.querySelector('[name="tickets_id"], [name="tickets_id_1"], [name="tickets_id_2"], [name="itemtype"][value="Ticket"]');
     function fields() {
@@ -52,18 +107,26 @@
           const managed = !!control.dataset.editcontrolDisabled;
           const editor = control.tagName === 'TEXTAREA' && control.id ? window.tinymce?.get(control.id) : null;
           if (editor?.on && !observedEditors.has(editor)) {
-            editor.on('input keydown change focus', () => { lastActivity=Date.now(); });
+            editor.on('init', scheduleFields);
             observedEditors.add(editor);
           }
-          const originalReadonlyEditor = !managed && editor?.mode?.get?.() === 'readonly';
-          if (block && !control.disabled) { control.dataset.editcontrolDisabled = '1'; control.disabled = true; }
+          const nativeReadonly = control.readOnly || window.tinymce_editor_configs?.[control.id]?.readonly === true;
+          if (block && !control.disabled) {
+            // Remember ownership BEFORE TinyMCE initializes from this disabled
+            // textarea. Otherwise it inherits readonly and cannot be restored.
+            if (control.tagName === 'TEXTAREA' && !nativeReadonly && (!editor || editor.mode?.get?.() !== 'readonly')) {
+              control.dataset.editcontrolEditorReadonly = '1';
+            }
+            control.dataset.editcontrolDisabled = '1'; control.disabled = true;
+          }
           if (!block && managed) { control.disabled = false; delete control.dataset.editcontrolDisabled; }
           if (editor?.mode?.set) {
             try {
-              if (block && control.dataset.editcontrolDisabled && !originalReadonlyEditor) {
-                editor.mode.set('readonly'); control.dataset.editcontrolEditorReadonly = '1';
-              } else if (!block && control.dataset.editcontrolEditorReadonly) {
-                editor.mode.set('design'); delete control.dataset.editcontrolEditorReadonly;
+              if (block && control.dataset.editcontrolEditorReadonly && editor.mode.get() !== 'readonly') {
+                editor.mode.set('readonly');
+              } else if (!block && control.dataset.editcontrolEditorReadonly && !nativeReadonly) {
+                if (editor.mode.get() !== 'design') editor.mode.set('design');
+                delete control.dataset.editcontrolEditorReadonly;
               }
             } catch { /* Editor initialization may still be in flight; server validation remains authoritative. */ }
           }
@@ -99,10 +162,18 @@
         msg.textContent = 'Este ticket está en uso o se ha actualizado. Conserve su texto antes de actualizar la página.';
       }
     }, true);
-    new MutationObserver(fields).observe(document.body, {childList:true, subtree:true});
-    for (const event of ['input','pointerdown','keydown']) {
-      document.addEventListener(event, () => { lastActivity = Date.now(); }, {passive:true});
-    }
+    // Batch additions and ignore TinyMCE toolbar/text mutations on large timelines.
+    const formSelector = 'form, input, select, textarea, button, [contenteditable]';
+    new MutationObserver(records => {
+      if (records.some(record => [...record.addedNodes].some(added => added.nodeType === 1
+          && !bar.contains(added) && !dock.contains(added)
+          && (added.matches(formSelector) || added.querySelector(formSelector))))) scheduleFields();
+    }).observe(document.body, {childList:true, subtree:true});
+    // Editors may initialize on demand long after the task form has been inserted.
+    if (window.tinymce?.on) window.tinymce.on('AddEditor', event => {
+      event.editor.on('init', scheduleFields);
+      scheduleFields();
+    });
     function body(action, leaseToken = requestToken || token) {
       return new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token:leaseToken, baseline:c.baseline,
         request_token:requestToken, request_key:pendingRequestKey, expected_generation:String(generation), _glpi_csrf_token:c.csrf});
@@ -132,10 +203,10 @@
       if (typeof r.can_edit === 'boolean') c.canEdit = r.can_edit;
       if (typeof r.can_takeover === 'boolean') c.canTakeover = r.can_takeover;
       if (r.generation !== undefined) generation = r.generation;
-      if (r.token) { token = r.token; requestToken = ''; lostControl=false; lastActivity = Date.now(); lastHeartbeat = Date.now(); }
+      if (r.token) { token = r.token; requestToken = ''; lostControl=false; lastHeartbeat = Date.now(); }
       if (r.mine && requestToken) {
         // The owner assigned directly to this tab's pre-registered request credential.
-        token = requestToken; requestToken = ''; lostControl=false; lastHeartbeat = Date.now(); lastActivity = Date.now();
+        token = requestToken; requestToken = ''; lostControl=false; lastHeartbeat = Date.now();
       }
       if (action === 'heartbeat') lastHeartbeat = Date.now();
       return r;
@@ -143,7 +214,7 @@
     function render(r) {
       const lost = mine && !r.mine;
       if (lost) lostControl=true;
-      mine = r.mine; changed = changed || r.changed;
+      mine = r.mine; available = r.available; changed = changed || r.changed;
       bar.className = normalClass;
       if (r.owner) {
         msg.textContent = c.mode === 'strict' && !mine
@@ -159,7 +230,8 @@
       request.hidden = !c.canEdit || mine || r.available;
       request.disabled = !!r.requested_by_me;
       request.textContent = r.requested_by_me ? 'Solicitud enviada' : 'Solicitar control';
-      takeover.hidden = !c.canTakeover || mine || (r.available && !lostControl);
+      takeover.hidden = mine || (r.available ? !c.canEdit || !lostControl : !c.canTakeover);
+      takeover.textContent = r.available ? 'Recuperar control' : 'Tomar control';
       takeover.disabled = changed;
       pendingRequestKey = mine ? (r.request_key || '') : '';
       notice.hidden = !mine || !r.requester_name;
@@ -170,6 +242,11 @@
       handoff.setAttribute('aria-label', `Ceder control a ${r.requester_name || 'otro técnico'}`);
       if (!notice.hidden) bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
       if (c.mode === 'strict' && r.owner && !mine) bar.classList.add('editcontrol-blocked');
+      dock.classList.toggle('editcontrol-dock-blocked', c.mode === 'strict' && !!r.owner && !mine);
+      dock.classList.toggle('editcontrol-dock-notice', !notice.hidden);
+      dockButton.textContent = !notice.hidden ? 'Solicitud de control' : mine ? 'Control: tú'
+        : r.owner ? `Bloqueado: ${r.owner}` : 'Control disponible';
+      dockButton.title = msg.textContent;
       fields();
     }
     function fail(error) {
@@ -181,6 +258,7 @@
         ? 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.' : error.message;
       bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
       if (c.mode === 'strict') { mine = false; fields(); }
+      dockButton.textContent = 'Control sin verificar'; dockButton.title = msg.textContent;
     }
     request.onclick = async () => {
       if (busy) return;
@@ -203,9 +281,9 @@
       finally { busy = false; }
     };
     takeover.onclick = async () => {
-      if (busy || !c.canTakeover || changed) return;
+      if (busy || !(available ? c.canEdit : c.canTakeover) || changed) return;
       busy = true; takeover.disabled = true;
-      try { render(await call('takeover')); }
+      try { render(await call(available ? 'acquire' : 'takeover')); }
       catch (error) { fail(error); }
       finally { busy = false; }
     };
@@ -217,7 +295,7 @@
       lastPoll = Date.now();
       busy = true;
       try {
-        const active = document.visibilityState === 'visible' && Date.now() - lastActivity < 180000;
+        const active = document.visibilityState === 'visible';
         let r;
         const heartbeatDue = Date.now() - lastHeartbeat >= c.interval * 1000;
         try { r = await call(mine && active && !changed && heartbeatDue ? 'heartbeat' : 'status'); }
@@ -239,7 +317,7 @@
       } catch (error) { fail(error); }
       finally { busy = false; }
     }
-    // Best-effort navigation/close release; TTL remains the correctness fallback.
+    // Best-effort navigation/close release; explicit takeover recovers abandoned tabs.
     window.addEventListener('pagehide', () => {
       stopped = true;
       if (!token) return;
@@ -253,5 +331,8 @@
   }
   const scan = () => document.querySelectorAll('.editcontrol-bootstrap').forEach(mount);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();
-  new MutationObserver(scan).observe(document.documentElement, {childList:true, subtree:true});
+  new MutationObserver(records => {
+    if (records.some(record => [...record.addedNodes].some(added => added.nodeType === 1
+        && (added.matches('.editcontrol-bootstrap') || added.querySelector('.editcontrol-bootstrap'))))) scan();
+  }).observe(document.documentElement, {childList:true, subtree:true});
 })();

@@ -34,7 +34,7 @@ permisos de lectura, carrera de apertura, recuperación tras caída temporal, ci
 con keepalive y la cabecera CSRF exigida por GLPI 11. No sustituye la prueba integrada.
 
 Para reproducir con Playwright CLI, iniciar `python tests/preview.py` en una terminal
-(solo escucha en 127.0.0.1 y se detiene en cinco minutos). En otra terminal:
+(solo escucha en 127.0.0.1 y se detiene en quince minutos). En otra terminal:
 
 ```powershell
 npx --yes --package @playwright/cli playwright-cli -s=editcontrol-ui open http://127.0.0.1:18769/tests/fixtures/bar.html --browser chrome
@@ -64,3 +64,24 @@ prueba se desactiva el envío de cookies para poder fijar un ID de sesión sint�
 cambio de modo, carrera y robo entre dos pestañas sin solicitud. Comprueba que el
 antiguo propietario conserva su texto y queda en solo lectura, y que fetch recibe
 las credenciales correctas. No sustituye las pruebas de perfiles reales de GLPI.
+
+## Regresiones 0.3.1 con TinyMCE real
+
+```sh
+python tools/prepare-editor-fixture.py
+python tests/preview.py
+# En otra terminal:
+npx --yes --package @playwright/cli@0.1.24 playwright-cli -s=regression open http://127.0.0.1:18769/tests/fixtures/rich-editor.html --browser chrome
+npx --yes --package @playwright/cli@0.1.24 playwright-cli -s=regression run-code --filename tests/ui-regressions.js
+npx --yes --package @playwright/cli@0.1.24 playwright-cli -s=regression run-code --filename tests/ui-free-recovery.js
+npx --yes --package @playwright/cli@0.1.24 playwright-cli -s=regression close
+```
+
+La descarga de TinyMCE 7.9.2 verifica SHA-256 y se guarda solo en tests/results,
+ignorado y excluido del paquete. El fixture usa un editor real, 300 entradas y
+respuestas de control simuladas. Prueba adquisición lenta, inicialización tardía,
+inactividad de un día simulada, dos pestañas, conservación de borradores, readonly
+nativo, indicador por hover/clic/teclado, restauración al volver arriba y 360 px.
+No reproduce todas las personalizaciones del GLPI de producción.
+GitHub Actions ejecuta también las cinco suites de navegador; las guardas CGI se
+comprueban localmente con php-cgi. El servidor de fixtures nunca se instala en GLPI.

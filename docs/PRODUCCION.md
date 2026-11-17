@@ -1,4 +1,11 @@
-# Validación en entorno real
+# Estado actual
+
+El responsable desactivó el plugin tras reportar dos regresiones en 0.3.0:
+pérdida de control por inactividad y editor de tareas bloqueado en un ticket grande.
+0.3.1 contiene las correcciones, pendientes de repetir la prueba en los tickets
+afectados antes de reactivar. El estado desactivado se conserva durante la actualización.
+
+## Registro de la prueba inicial de 0.3.0
 
 El 17 de noviembre de 2026 el responsable confirmó que 0.3.0 funciona correctamente
 tras probarla con un compañero en producción. La confirmación cubre su flujo con

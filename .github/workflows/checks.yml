@@ -34,3 +34,25 @@ jobs:
       - run: node --check public/js/editcontrol.js
       - run: python3 tools/package.py
       - run: python3 tools/validate-release.py
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+      - run: python3 tools/prepare-editor-fixture.py
+      - name: Browser regressions with real TinyMCE
+        run: |
+          python3 tests/preview.py &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in 1 2 3 4 5; do curl -fsS http://127.0.0.1:18769/tests/fixtures/bar.html >/dev/null && break || sleep 1; done
+          cli() { npx --yes --package @playwright/cli@0.1.24 playwright-cli -s=ci "$@"; }
+          cli open http://127.0.0.1:18769/tests/fixtures/bar.html --browser chrome
+          for suite in ui-checks ui-handoff ui-takeover ui-regressions ui-free-recovery; do
+            cli run-code --filename "tests/$suite.js" > "$suite.log" 2>&1
+            cat "$suite.log"
+            if grep -q '^### Error' "$suite.log"; then exit 1; fi
+          done
+          cli close

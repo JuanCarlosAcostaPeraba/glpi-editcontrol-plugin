@@ -1,12 +1,13 @@
-# Control de edición para GLPI — 0.3.0
+# Control de edición para GLPI — 0.3.1
 
 Control de edición simultánea de tickets desde la interfaz central de GLPI.
 No modifica el núcleo de GLPI y no reutiliza sus tablas ObjectLock.
 
-**Versión 0.3.0 validada con dos técnicos en producción el 17 de noviembre de 2026.**
-Entorno comprobado: GLPI 11.0.4, PHP 8.2.35 y MariaDB 11.8.3.
-El código admite GLPI 11/12; GLPI 12 no tiene validación integrada.
-El catálogo se limita a GLPI 11.0.4. [English documentation](../README.md).
+**0.3.1: candidata de corrección, pendiente de repetir la prueba integrada.**
+Tras una prueba inicial correcta de 0.3.0 con dos técnicos, se notificaron bloqueos
+por inactividad y en editores de tareas. El plugin está desactivado hasta comprobar
+las correcciones en los tickets afectados. Entorno conocido: GLPI 11.0.4,
+PHP 8.2.35 y MariaDB 11.8.3. GLPI 12 sigue sin validación integrada.
 
 ## Uso
 
@@ -18,12 +19,16 @@ Los perfiles de solo lectura nunca adquieren
 el control. No se comparte el token entre pestañas, ni siquiera del mismo usuario.
 Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
 
-Al salir del ticket, se intenta liberar el control automáticamente. Tras un guardado protegido con éxito,
-incluidos seguimiento, tarea o solución, el servidor intenta liberarlo al finalizar
-la petición. Si este paso falla, la caducidad sigue siendo obligatoria. Una pestaña
-cerrada o abandonada deja de renovar; el bloqueo vence sin depender de cron.
-Una pestaña oculta no renueva. Una visible sin interacción deja de renovar tras
-tres minutos. El control vence después del último heartbeat más el TTL configurado.
+El control **no caduca por inactividad**, al ocultar una pestaña o al suspenderse
+el navegador. Al salir o guardar correctamente se intenta liberar. Si el navegador
+se cierra inesperadamente o falla la liberación, otro técnico autorizado puede
+**Tomar control**. La caducidad configurada afecta a solicitudes sin respuesta,
+no al propietario. Las sesiones y los permisos de GLPI siguen aplicándose.
+
+Cuando la barra superior queda fuera de pantalla, aparece un indicador compacto
+abajo a la derecha. Muestra el propietario y permite desplegar el mismo aviso y
+sus acciones por ratón, clic, teclado o toque. Una solicitud cambia el indicador
+a «Solicitud de control»; se puede ceder sin volver al principio del ticket.
 
 Un técnico puede **Solicitar control**. El propietario recibe un aviso en la barra
 con **Ceder control** y puede entregarlo directamente a la pestaña solicitante,
@@ -42,7 +47,7 @@ En modo estricto, quienes no tienen el control ven la barra fucsia y el formular
 en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
 escribir dentro del editor para mantener el control durante ediciones largas.
 
-Si el ticket cambia, caduca el control, se pierde la conexión o un administrador
+Si el ticket cambia, se pierde la conexión o un técnico autorizado
 toma el control, **conservar el texto y recargar antes de continuar**. No hay
 mezcla automática de borradores ni recuperación de texto garantizada al redirigir GLPI.
 
@@ -56,7 +61,7 @@ mezcla automática de borradores ni recuperación de texto garantizada al rediri
    durante la comprobación de requisitos.
 5. En Configuración → Complementos, instalar y activar **Control de edición**.
 6. Abrir su configuración desde la lista de complementos. Por defecto funciona
-   en **solo aviso**, con caducidad de 120 segundos.
+   en **solo aviso**, con caducidad de solicitudes de 120 segundos.
 7. Con un perfil autorizado para configurar GLPI, conceder el permiso específico
    de administración a los perfiles elegidos. Renovar sesión/perfil para aplicar derechos.
 8. Completar primero las pruebas del modo aviso. Activar **bloqueo estricto** y
