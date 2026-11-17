@@ -1,11 +1,12 @@
-Fecha: 2026-11-16
-Versión: 0.1.3
+Fecha: 2026-11-17
+Versión: 0.2.0
 PHP local 8.5.6 / PDO SQLite (GET_LOCK simulado).
-Navegador: Chrome, seis escenarios con respuestas ficticias: propietario, adquisición automática, lector, carrera, HTML 403, recuperación.
-Revisión visual: escritorio y 360 px, sin desbordamiento. Cabecera X-Glpi-Csrf-Token verificada.
-Pendiente: matriz completa con técnicos reales y GLPI 12.
-Producción: versión 0.1.3 activa, modo aviso, TTL 120; HTTP 200 para GLPI y JavaScript.
-CheckCsrfListener real de GLPI 11.0.4 acepta la cabecera corregida (prueba CLI aislada).
+Navegador Chrome: seis escenarios básicos y cesión entre dos pestañas con backend simulado.
+Cesión: aviso automático, borradores intactos, sin navegación, token del receptor y protección del cedente en estricto.
+Pruebas reales con técnicos y GLPI 12: pendientes.
+MariaDB real: solicitud y cesión verificadas en tablas TEMPORARY de conexión independiente.
+Receptor correcto, versión conservada, token anterior rechazado y tercero excluido: OK.
+Producción: 0.2.0 activa, esquema v2, modo aviso y TTL 120 conservados.
 
 PASS: API REST reconocida por ruta exacta
 PASS: API con GLPI en subdirectorio
@@ -38,6 +39,22 @@ PASS: No se adquiere control sobre formulario obsoleto
 PASS: Guardado y cierre simulados liberan el control
 PASS: Modo aviso permite avanzar sin control
 PASS: AuditorÃ­a identifica toma de control y propietario anterior
+PASS: Solicitud vinculada a su pestaÃ±a y sesiÃ³n
+PASS: Otra sesiÃ³n del mismo usuario no suplanta la solicitud
+PASS: Solo el propietario actual puede ceder
+PASS: No se cede a una solicitud sustituida entre aviso y clic
+PASS: Un conflicto de solicitud conserva al propietario
+PASS: CesiÃ³n directa a la pestaÃ±a solicitante sin liberar al resto
+PASS: Otra pestaÃ±a del receptor no obtiene el control
+PASS: CesiÃ³n cambia generaciÃ³n y conserva versiÃ³n del formulario
+PASS: Un tercero no puede adelantarse al receptor
+PASS: LiberaciÃ³n tardÃ­a del cedente no libera al receptor
+PASS: PestaÃ±a cedente no puede guardar con su token anterior
+PASS: Historial registra cedente y receptor
+PASS: SesiÃ³n distinta no mantiene una solicitud abandonada
+PASS: Espera visible renueva su solicitud sin repetir avisos de historial
+PASS: Solicitud abandonada caduca y no recibe la cesiÃ³n
+PASS: Caducar una solicitud no quita el control al propietario
 PASS: 8 procesos concurrentes: exactamente un ganador
 PASS: RestricciÃ³n Ãºnica conserva una sola fila
 Suite completada. La validaciÃ³n de GLPI y navegador se ejecuta por separado.

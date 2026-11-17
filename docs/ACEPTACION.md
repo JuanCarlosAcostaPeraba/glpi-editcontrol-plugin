@@ -15,7 +15,7 @@ No usar datos asistenciales. Guardar versión, plugins activos, registros y resu
 | 5. Red | A adquiere, editar sin enviar, desconectar red más de TTL, reconectar | B puede adquirir; A recibe pérdida de control; un POST antiguo de A es rechazado |
 | 6. Resolver/cerrar | A resuelve y luego probar cierre con nueva adquisición | Solución/estado guardados; liberación tras éxito o TTL como respaldo; sin control permanente |
 | 7. Administración | C libera desde panel y toma control desde barra en otra repetición | A pierde control; no puede guardar ni liberar el control nuevo; historial identifica C, fecha y anterior |
-| 8. Solicitud | B solicita, A espera un sondeo y termina | A ve solicitud; B ve disponibilidad sin correo; múltiples peticiones no generan spam cada segundo |
+| 8. Solicitud y cesión | B solicita, A ve el aviso y pulsa Ceder control | Sin salir ni recargar: A deja de tener control y B lo recibe; ambos borradores se conservan; un tercero no puede adelantarse |
 | 9. Pestaña antigua | A conserva pestaña, dejar vencer, B adquiere y guarda; reenviar POST de A | El cambio de B persiste y el POST antiguo falla incluso sin JavaScript |
 | 10. Desactivar/actualizar | Finalizar edición, mantenimiento, desactivar, actualizar y reactivar tras TTL | Sin protección mientras está desactivado; esquema/datos se conservan; sin controles antiguos vigentes tras espera |
 | 11. Mismo usuario | Dos pestañas A, ambas intentan adquirir; repetir con pestaña duplicada | Solo una posee token; otra no renueva, guarda ni libera su control |

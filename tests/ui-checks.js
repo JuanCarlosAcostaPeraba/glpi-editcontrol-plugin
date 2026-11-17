@@ -8,12 +8,12 @@ async (page) => {
       await page.getByRole('button', {name:'Solicitud enviada', exact:true}).waitFor();
     }
     if (scenario === 'auto' || scenario === 'recover') {
-      await page.evaluate(async () => { await fixture.interval(); });
+      await page.evaluate(async () => { fixture.elapsed+=41000; await fixture.interval(); });
       if (scenario === 'auto') await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide')));
     }
     const result = await page.evaluate(() => ({
       text:document.querySelector('[role=status]').textContent,
-      buttons:[...document.querySelectorAll('button')].filter(b=>!b.hidden).map(b=>b.textContent),
+      buttons:[...document.querySelector('[aria-label="Actividad del ticket"]').querySelectorAll('button')].filter(b=>!b.hidden&&b.getClientRects().length).map(b=>b.textContent),
       actions:fixture.calls.map(c=>c.action),
       secure:fixture.calls.every(c=>c.headers['X-Glpi-Csrf-Token']==='test-csrf'),
       release:fixture.calls.some(c=>c.action==='release'&&c.keepalive),

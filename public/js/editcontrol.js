@@ -8,7 +8,8 @@
     if (document.querySelector('[data-editcontrol-active]')) return;
     node.dataset.editcontrolActive = '1';
     let token = '', mine = false, changed = false, busy = false, stopped = false;
-    let lastActivity = Date.now();
+    let requestToken = '', pendingRequestKey = '';
+    let lastActivity = Date.now(), lastHeartbeat = 0, lastPoll = 0;
     const bar = document.createElement('section');
     const normalClass = 'alert alert-secondary d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
     bar.className = normalClass;
@@ -21,7 +22,15 @@
     const request = document.createElement('button');
     request.type = 'button'; request.className = 'btn btn-sm btn-outline-primary';
     request.textContent = 'Solicitar control'; request.hidden = true;
-    bar.append(msg, request);
+    const notice = document.createElement('div');
+    notice.className = 'd-flex align-items-center flex-wrap gap-2 w-100';
+    notice.setAttribute('role', 'alert'); notice.hidden = true;
+    const noticeText = document.createElement('span');
+    const handoff = document.createElement('button');
+    handoff.type = 'button'; handoff.className = 'btn btn-sm btn-primary';
+    handoff.textContent = 'Ceder control'; handoff.hidden = true;
+    notice.append(noticeText, handoff);
+    bar.append(msg, request, notice);
     (document.querySelector('main') || document.body).prepend(bar);
     const ticketForm = form => /(?:ticket|itilfollowup|tickettask|itilsolution)\.form\.php(?:$|[?\/])/.test(new URL(form.action, location.href).pathname)
       || !!form.querySelector('[name="tickets_id"], [name="itemtype"][value="Ticket"]');
@@ -56,8 +65,9 @@
     for (const event of ['input','pointerdown','keydown']) {
       document.addEventListener(event, () => { lastActivity = Date.now(); }, {passive:true});
     }
-    function body(action, leaseToken = token) {
-      return new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token:leaseToken, baseline:c.baseline, _glpi_csrf_token:c.csrf});
+    function body(action, leaseToken = requestToken || token) {
+      return new URLSearchParams({action, ticket:c.id, nonce:c.nonce, token:leaseToken, baseline:c.baseline,
+        request_token:requestToken, request_key:pendingRequestKey, _glpi_csrf_token:c.csrf});
     }
     function headers() {
       // GLPI 11 checks this HEADER (not the POST field) on XMLHttpRequest requests.
@@ -80,7 +90,12 @@
         const error = new Error(r.message || 'No se puede consultar la actividad del ticket.');
         error.status = res.status; throw error;
       }
-      if (r.token) { token = r.token; lastActivity = Date.now(); }
+      if (r.token) { token = r.token; requestToken = ''; lastActivity = Date.now(); lastHeartbeat = Date.now(); }
+      if (r.mine && requestToken) {
+        // The owner assigned directly to this tab's pre-registered request credential.
+        token = requestToken; requestToken = ''; lastHeartbeat = Date.now(); lastActivity = Date.now();
+      }
+      if (action === 'heartbeat') lastHeartbeat = Date.now();
       return r;
     }
     function render(r) {
@@ -89,7 +104,6 @@
       bar.className = normalClass;
       if (r.owner) {
         msg.textContent = `${r.owner}${mine ? ' (tú)' : r.same_user ? ' (otra pestaña)' : ''} está usando este ticket.`;
-        if (mine && r.requester_name) msg.textContent += ` ${r.requester_name} solicita el control.`;
       } else {
         msg.textContent = 'Ningún técnico está usando este ticket.';
       }
@@ -99,11 +113,20 @@
       request.hidden = !c.canEdit || mine || r.available;
       request.disabled = !!r.requested_by_me;
       request.textContent = r.requested_by_me ? 'Solicitud enviada' : 'Solicitar control';
+      pendingRequestKey = mine ? (r.request_key || '') : '';
+      notice.hidden = !mine || !r.requester_name;
+      const message = r.requester_name ? `${r.requester_name} solicita el control de este ticket.` : '';
+      if (noticeText.textContent !== message) noticeText.textContent = message;
+      handoff.hidden = notice.hidden || !pendingRequestKey;
+      handoff.disabled = false;
+      handoff.setAttribute('aria-label', `Ceder control a ${r.requester_name || 'otro técnico'}`);
+      if (!notice.hidden) bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
       fields();
     }
     function fail(error) {
       // A temporary outage does not discard the token, allowing later heartbeats to recover.
       request.hidden = true;
+      handoff.hidden = true;
       msg.textContent = error.name === 'TypeError' || error.name === 'TimeoutError'
         ? 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.' : error.message;
       bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
@@ -112,17 +135,35 @@
     request.onclick = async () => {
       if (busy) return;
       busy = true; request.disabled = true;
+      if (!requestToken) requestToken = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
       try { render(await call('request')); }
       catch (error) { fail(error); }
       finally { busy = false; }
     };
-    async function poll() {
+    handoff.onclick = async () => {
+      if (busy || !mine || !pendingRequestKey) return;
+      busy = true; handoff.disabled = true;
+      try {
+        const r = await call('handoff');
+        // This is a deliberate handoff, not a stale-form event. Preserve all draft fields.
+        token = ''; mine = false; requestToken = '';
+        render(r);
+        msg.textContent += ' Has cedido el control.';
+      } catch (error) { fail(error); }
+      finally { busy = false; }
+    };
+    async function poll(force = false) {
       if (busy || stopped || !node.isConnected) return;
+      const period = document.visibilityState !== 'visible' ? 30000
+        : mine || requestToken ? Math.max(5, c.pollInterval || 8) * 1000 : c.interval * 1000;
+      if (!force && Date.now() - lastPoll < period) return;
+      lastPoll = Date.now();
       busy = true;
       try {
         const active = document.visibilityState === 'visible' && Date.now() - lastActivity < 180000;
         let r;
-        try { r = await call(mine && active && !changed ? 'heartbeat' : 'status'); }
+        const heartbeatDue = Date.now() - lastHeartbeat >= c.interval * 1000;
+        try { r = await call(mine && active && !changed && heartbeatDue ? 'heartbeat' : 'status'); }
         catch (error) {
           if (error.status !== 409) throw error;
           r = await call('status');
@@ -146,10 +187,10 @@
       fetch(c.url, {method:'POST', credentials:'same-origin', body:body('release'), headers:headers(), keepalive:true}).catch(() => {});
       token = ''; mine = false;
     });
-    window.addEventListener('pageshow', event => { if (event.persisted) { stopped = false; poll(); } });
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(); });
+    window.addEventListener('pageshow', event => { if (event.persisted) { stopped = false; poll(true); } });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(true); });
     fields(); poll();
-    setInterval(poll, c.interval * 1000);
+    setInterval(poll, Math.max(5, Math.min(c.pollInterval || 8, c.interval)) * 1000);
   }
   const scan = () => document.querySelectorAll('.editcontrol-bootstrap').forEach(mount);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan); else scan();

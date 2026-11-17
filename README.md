@@ -1,4 +1,4 @@
-# Control de edición para GLPI — 0.1.3
+# Control de edición para GLPI — 0.2.0
 
 Primera versión experimental para impedir ediciones simultáneas de un ticket
 desde la interfaz central de GLPI. Repositorio independiente, rama `develop`.
@@ -27,7 +27,11 @@ Una pestaña oculta no renueva. Una visible sin interacción deja de renovar tra
 tres minutos. El control vence después del último heartbeat más el TTL configurado.
 
 Un técnico puede **Solicitar control**. El propietario recibe un aviso en la barra
-en el siguiente sondeo. Los observadores ven cuándo queda libre, sin depender
+con **Ceder control** y puede entregarlo directamente a la pestaña solicitante,
+sin salir del ticket ni recargar formularios. El compañero recibe el control en
+su pestaña abierta. Ambos conservan sus borradores; ceder no guarda los cambios.
+El propietario y quien espera consultan cambios cada ocho segundos cuando la
+pestaña está visible. Los observadores ven cuándo queda libre, sin depender
 del correo ni de las notificaciones nativas. No se envían notificaciones de escritorio.
 El permiso específico `plugin_editcontrol_admin` permite tomar el control y liberar
 bloqueos administrativos dentro de los tickets accesibles al perfil y entidad.
@@ -85,6 +89,7 @@ El modo **solo aviso permite guardar sin control** y no evita conflictos.
 - `tests/README.md`: ejecución con modelo SQLite y con MariaDB/MySQL reales.
 - `docs/RESULTADOS.txt`: salida real de pruebas locales.
 - `tests/fixtures/bar.html` y `tests/ui-checks.js`: seis escenarios de navegador con respuestas simuladas.
+- `tests/ui-handoff.js`: cesión entre dos pestañas, sin navegación ni pérdida de borradores.
 - `docs/INVESTIGACION.md`: fuentes oficiales y decisión de arquitectura.
 - `docs/ACEPTACION.md`: doce escenarios para dos navegadores en GLPI 11 y 12.
 - `docs/MANTENIMIENTO.md`: actualización, desactivación, retirada y diagnóstico.

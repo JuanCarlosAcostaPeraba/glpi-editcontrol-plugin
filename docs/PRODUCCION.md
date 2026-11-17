@@ -7,7 +7,7 @@ un compañero. No se crearon tickets de prueba ni se activó el bloqueo estricto
 Estado final:
 
 - GLPI 11.0.4; PHP 8.2.35; MariaDB 11.8.3.
-- Plugin 0.1.3 instalado y activado por la consola oficial, ejecutada como usuario apache.
+- Plugin 0.2.0 instalado y activado por la consola oficial, ejecutada como usuario apache.
 - Modo `warning` (solo aviso), TTL 120 segundos.
 - ObjectLock nativo ya estaba desactivado; no se cambió esa configuración.
 - Código del plugin separado del núcleo, sin modificar archivos centrales.
@@ -50,8 +50,27 @@ adquisición calcula correctamente la propiedad usando el token recién emitido.
 1. Recargar completamente la página del ticket (Ctrl+F5 si es necesario).
 2. Abrir un ticket: la primera pestaña visible con UPDATE adquiere automáticamente.
 3. El compañero abre el mismo ticket y comprueba el nombre del propietario y el aviso.
-4. El compañero pulsa Solicitar control y el propietario comprueba el aviso.
-5. El propietario sale del ticket; la otra pestaña adquiere cuando detecta disponibilidad.
+4. El compañero pulsa Solicitar control y el propietario recibe el aviso con Ceder control.
+5. El propietario cede sin salir; el compañero recibe el control sin recargar su página.
+6. Comprobar que se conservan los textos sin guardar de ambas pestañas.
+
+## Actualización del 17 de noviembre: 0.2.0
+
+La cesión es directa y atómica a la pestaña que solicitó el control, usando sus
+hashes de token y sesión registrados previamente. No se libera el ticket para
+que compitan todos. Un clic con una solicitud ya sustituida se rechaza, y el token
+del cedente deja de ser válido. El historial registra envío y recepción de control.
+La instalación añade los dos campos mediante la migración v1 → v2 de GLPI.
+
+Validación de 0.2.0: 48 comprobaciones PHP, los seis escenarios de navegador y
+una cesión entre dos pestañas con backend simulado. Además se comprobó la cesión
+real contra MariaDB en tablas TEMPORARY de una conexión independiente: receptor
+correcto, versión del ticket conservada, rechazo del token anterior, exclusión de
+un tercero y liberación por el receptor. No se modificaron tickets, usuarios ni
+auditoría permanentes durante esa prueba. Modo aviso y TTL 120 se conservaron.
+
+Las pestañas que estaban abiertas con 0.1.3 necesitan cargar 0.2.0 una vez para usar
+el protocolo nuevo. Después, avisos y cesiones no recargan la página ni sus formularios.
 
 En modo aviso los guardados siguen permitidos. Esta prueba no valida todavía
 el rechazo de escrituras ni certifica todos los casos de concurrencia.

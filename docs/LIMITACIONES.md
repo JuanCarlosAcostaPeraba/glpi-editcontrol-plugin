@@ -1,15 +1,17 @@
 # Limitaciones y riesgos conocidos
 
-La versión 0.1.3 es experimental. Se ha autorizado e instalado una prueba en
+La versión 0.2.0 es experimental. Se ha autorizado e instalado una prueba en
 producción en **solo aviso**. El bloqueo estricto sigue sin validación completa.
 
 1. Se instaló y activó en GLPI 11.0.4. Se verificaron esquema y GET_LOCK sobre
    MariaDB 11.8.3, carga del plugin y entrega del JavaScript. No se ejecutó la matriz
-   con dos navegadores reales ni una instalación en GLPI 12. Las 32 comprobaciones PHP locales usan un adaptador SQLite con
+   con técnicos reales ni una instalación en GLPI 12. Las pruebas PHP locales usan un adaptador SQLite con
    GET_LOCK simulado mediante flock. No prueban el SQL MariaDB ni el funcionamiento
    real de sus mutex, CSRF del núcleo, hooks, derechos o selección de formularios.
    Otros seis escenarios de navegador comprueban el JavaScript con respuestas
    ficticias, incluidas cabecera CSRF y recuperación de una caída temporal.
+   La cesión 0.2.0 también se verificó con dos pestañas y backend simulado, y con
+   tablas temporales en MariaDB real. Sigue pendiente la matriz completa del HUC.
 2. La producción comprobada por SSH es GLPI 11.0.4 con PHP 8.2.35. La compatibilidad
    completa con GLPI 12 sigue pendiente. Esta entrega rechaza GLPI 10.
 3. El alcance se limita a las clases y hooks declarados en README. Documentos,
@@ -33,9 +35,14 @@ producción en **solo aviso**. El bloqueo estricto sigue sin validación complet
    no hay atomicidad entre tickets. Revisar acciones masivas y otros plugins.
 7. Si otro plugin invalida una escritura después del hook de validación, puede
    haberse incrementado la revisión sin cambios finales. Se exigirá recarga.
-8. La comunicación de la barra tarda hasta un intervalo TTL/3 (mínimo 15 s).
+8. La solicitud y recepción de la cesión tardan hasta ocho segundos en pestañas
+   visibles de propietario y solicitante; pestañas ocultas pueden sufrir throttling
+   adicional del navegador. Los observadores sin solicitud usan TTL/3 (mínimo 15 s).
    Existe una última solicitud visible por ticket; otras solicitudes posteriores
    la sustituyen, aunque se registran en historial. No hay notificación push.
+   El propietario solo puede ceder a la solicitud que está viendo: una sustitución
+   concurrente obliga a comprobar el nuevo aviso. La solicitud caduca tras TTL sin
+   renovarse; una pestaña cerrada no puede retener una cesión permanentemente.
 9. Al ocultar una pestaña se detiene la renovación. Tras tres minutos sin interacción
    en una pestaña visible, también se detiene. Debe ajustarse el TTL al trabajo real.
 10. Los textos de formularios no se guardan como borradores. El rechazo del servidor

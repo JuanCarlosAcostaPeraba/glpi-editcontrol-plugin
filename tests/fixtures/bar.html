@@ -4,17 +4,19 @@
 <style>
   body{margin:0;background:#191b1f;color:#eee;font:14px system-ui,sans-serif}main{max-width:1100px;margin:24px auto}.alert{background:#252830;border:1px solid #454a55;border-radius:6px}.alert-warning{background:#403617;color:#fff3cd}.d-flex{display:flex}.align-items-center{align-items:center}.flex-wrap{flex-wrap:wrap}.gap-2{gap:8px}.m-3{margin:16px}.py-2{padding-top:8px;padding-bottom:8px}.px-3{padding-left:16px;padding-right:16px}.mb-0{margin:0}.flex-grow-1{flex-grow:1}.btn{font:inherit;padding:6px 10px;border-radius:4px;background:transparent;border:1px solid #83afff;color:#c8dcff;cursor:pointer}.btn:hover{background:#303c50}.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}.btn:disabled{opacity:.65;cursor:default}[hidden]{display:none!important}
 </style>
-<main><div class="editcontrol-bootstrap"></div></main>
+<main><div class="editcontrol-bootstrap"></div><form method="post" action="https://example.test/front/ticket.form.php"><textarea name="content">Borrador sin guardar</textarea><button type="submit">Guardar</button></form></main>
 <script>
   const scenario = new URL(location.href).searchParams.get('scenario') || 'owner';
-  const cfg = {id:1,baseline:'current',nonce:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',mode:'warning',interval:40,url:'https://example.test/lease'};
+  const actor = new URL(location.href).searchParams.get('actor') || 'A';
+  const cfg = {id:1,baseline:'current',nonce:scenario==='linked'?actor:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',mode:scenario==='linked'?'strict':'warning',interval:40,pollInterval:8,url:scenario==='linked'?location.origin+'/lease':'https://example.test/lease'};
   document.querySelector('.editcontrol-bootstrap').dataset.config=JSON.stringify(cfg);
-  window.fixture = {calls:[], interval:null, scenario, failed:false};
+  window.fixture = {calls:[], interval:null, scenario, failed:false, elapsed:0};
+  const realNow=Date.now(); Date.now=()=>realNow+fixture.elapsed;
   const actualInterval=window.setInterval;
-  window.setInterval=fn=>{fixture.interval=fn;return 1;};
+  window.setInterval=(fn,delay)=>{fixture.interval=fn;fixture.delay=delay;return 1;};
   let owner = scenario === 'owner' || scenario === 'reader' || scenario === 'html' || scenario === 'race' ? 'Ana Pérez' : '';
   let mine=false, requested=false, firstStatus=true;
-  window.fetch=async(url,options)=>{
+  if(scenario!=='linked')window.fetch=async(url,options)=>{
     const action=options.body.get('action');
     fixture.calls.push({action,headers:options.headers,keepalive:!!options.keepalive});
     if(options.headers['X-Glpi-Csrf-Token']!=='test-csrf') throw new Error('Missing CSRF header');

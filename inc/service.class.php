@@ -69,6 +69,10 @@ final class PluginEditcontrolService {
             $this->clear($id, 0, 'expired');
             $r = $this->row($id);
         }
+        if ((int)$r['requester'] > 0 && (int)$r['requested'] <= $this->now() - $this->ttl) {
+            $this->q("UPDATE glpi_plugin_editcontrol_leases SET requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+            $r = $this->row($id);
+        }
         return $r;
     }
     public function owns(array $r, int $user, string $token, string $session): bool {
@@ -86,7 +90,7 @@ final class PluginEditcontrolService {
         $token = bin2hex(random_bytes(32));
         $hash = $this->quote(hash('sha256', $token));
         $session = $this->quote(hash('sha256', $session));
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl,requester=0,requested=0 WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
         $this->event($id, $user, $force ? 'takeover' : 'acquired', (int)$r['users_id']);
         return $token;
     }
@@ -98,7 +102,7 @@ final class PluginEditcontrolService {
     public function clear(int $id, int $actor, string $reason): void {
         $this->lock($id);
         $old = (int)$this->row($id)['users_id'];
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET users_id=0,token_hash='',session_hash='',expires=0,requester=0,requested=0 WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET users_id=0,token_hash='',session_hash='',expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
         if ($old) { $this->event($id, $actor, $reason, $old); }
     }
     public function release(int $id, int $user, string $token, string $session): void {
@@ -106,12 +110,46 @@ final class PluginEditcontrolService {
         if (!$this->owns($r, $user, $token, $session)) { throw new PluginEditcontrolConflict('La pestaña ya no tiene el control.'); }
         $this->clear($id, $user, 'released');
     }
-    public function request(int $id, int $user): void {
+    public function request(int $id, int $user, string $requestToken = '', string $session = ''): void {
         $r = $this->expire($id);
         if (!(int)$r['users_id']) { return; }
-        if ((int)$r['requester'] === $user && (int)$r['requested'] > $this->now() - 30) { return; }
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET requester=$user,requested=UNIX_TIMESTAMP() WHERE tickets_id=$id");
+        if (($this->requestedBy($r, $user, $requestToken, $session)
+            || ($requestToken === '' && (int)$r['requester'] === $user)) && (int)$r['requested'] > $this->now() - 30) { return; }
+        if ($requestToken !== '' && !preg_match('/^[a-f0-9]{64}$/D', $requestToken)) {
+            throw new InvalidArgumentException('Solicitud no válida');
+        }
+        $hash = $this->quote($requestToken === '' ? '' : hash('sha256', $requestToken));
+        $sessionHash = $this->quote($requestToken === '' ? '' : hash('sha256', $session));
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET requester=$user,requested=UNIX_TIMESTAMP(),requester_token_hash=$hash,requester_session_hash=$sessionHash WHERE tickets_id=$id");
         $this->event($id, $user, 'requested', (int)$r['users_id']);
+    }
+    public function requestedBy(array $r, int $user, string $requestToken, string $session): bool {
+        return $requestToken !== '' && $user > 0 && (int)$r['requester'] === $user
+            && hash_equals($r['requester_token_hash'], hash('sha256', $requestToken))
+            && hash_equals($r['requester_session_hash'], hash('sha256', $session));
+    }
+    public function refreshRequest(int $id, int $user, string $requestToken, string $session): void {
+        $r = $this->expire($id);
+        if ($this->requestedBy($r, $user, $requestToken, $session)) {
+            $this->q("UPDATE glpi_plugin_editcontrol_leases SET requested=UNIX_TIMESTAMP() WHERE tickets_id=$id");
+        }
+    }
+    public function handoff(int $id, int $user, string $token, string $session, string $requestKey): void {
+        $r = $this->expire($id);
+        if (!$this->owns($r, $user, $token, $session)) {
+            throw new PluginEditcontrolConflict('Ya no tiene el control de este ticket.');
+        }
+        if (!(int)$r['requester'] || $requestKey === '' || $r['requester_token_hash'] === ''
+            || !hash_equals($r['requester_token_hash'], $requestKey)) {
+            throw new PluginEditcontrolConflict('La solicitud ha cambiado o ya no está disponible.');
+        }
+        $target = (int)$r['requester'];
+        $targetTokenHash = $this->quote($r['requester_token_hash']);
+        $targetSessionHash = $this->quote($r['requester_session_hash']);
+        // Never expose a free interval: assign directly to the requesting tab under the same mutex.
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1,users_id=$target,token_hash=$targetTokenHash,session_hash=$targetSessionHash,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=UNIX_TIMESTAMP()+$this->ttl,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->event($id, $user, 'handoff_sent');
+        $this->event($id, $target, 'handoff_received', $user);
     }
     public function validateWrite(int $id, int $user, string $token, string $session, string $baseline, bool $strict): void {
         $r = $this->expire($id);

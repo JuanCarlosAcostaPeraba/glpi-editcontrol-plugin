@@ -7,9 +7,12 @@ El derecho específico `plugin_editcontrol_admin` con READ autoriza tomar y libe
 el control. No concede acceso adicional a tickets: se comprueba Ticket::can y se
 mantienen las restricciones de perfil/entidad. Separar ambos tipos de administradores.
 
-TTL: 60–1800 segundos, por defecto 120. Heartbeat/sondeo: TTL/3, mínimo 15 segundos.
-Cada pestaña abierta realiza una petición por intervalo; 100 pestañas con TTL 120
-suponen aproximadamente 2,5 peticiones por segundo. Medir en preproducción.
+TTL: 60–1800 segundos, por defecto 120. Heartbeat: TTL/3, mínimo 15 segundos.
+El propietario y quien espera consultan novedades cada ocho segundos en pestañas
+visibles; un observador sin solicitud usa el intervalo normal del heartbeat.
+Las pestañas ocultas consultan como máximo cada 32 segundos con el temporizador
+predeterminado, sin renovar el lease del propietario. Cien propietarios/solicitantes
+visibles generan unas 12,5 peticiones por segundo; medir la carga real.
 El historial registra adquisición, toma de control, liberación, caducidad observada,
 solicitudes, rechazos, avisos y escrituras externas. La fecha usa epoch del SQL;
 el navegador representa horas en su zona y el panel usa la zona configurada en PHP.
@@ -23,15 +26,14 @@ el navegador representa horas en su zona y el panel usa la zona configurada en P
    Asegurar que cambian las fechas de los archivos PHP para que OPcache detecte
    la actualización; si la validación de fechas está desactivada, seguir el
    procedimiento de invalidación de OPcache de la instalación.
-5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v1 usa
-   CREATE TABLE IF NOT EXISTS y no borra datos; repetirlo es idempotente.
+5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v2 añade dos
+   campos de hashes para la solicitud con Migration de GLPI; no borra datos y es idempotente.
 6. Esperar como mínimo el TTL anterior antes de reactivar y recargar los tickets.
 7. Validar en aviso y posteriormente en estricto.
 
-La primera entrega solo contiene esquema v1. Al añadir columnas en futuras
-versiones se deben incorporar migraciones ordenadas y probadas mediante el
-mecanismo Migration de GLPI; incrementar `schema_version` tras éxito, no antes.
-No se declara que CREATE IF NOT EXISTS migre cambios estructurales futuros.
+La actualización v1 → v2 usa Migration::addField y executeMigration, comprueba los
+campos resultantes y solo entonces guarda schema_version=2. Los hashes vinculan la
+solicitud con su pestaña y sesión. Mantener este orden para futuras migraciones.
 
 ## Desactivar
 

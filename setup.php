@@ -1,6 +1,6 @@
 <?php
 /** SPDX-License-Identifier: GPL-3.0-or-later */
-define('PLUGIN_EDITCONTROL_VERSION', '0.1.3');
+define('PLUGIN_EDITCONTROL_VERSION', '0.2.0');
 require_once __DIR__ . '/inc/service.class.php';
 require_once __DIR__ . '/inc/bridge.class.php';
 

@@ -45,3 +45,10 @@ npx --yes --package @playwright/cli playwright-cli -s=editcontrol-ui close
 
 La comprobación visual se realizó a anchura de escritorio y a 360 px, con la
 apariencia de prueba; las clases de la barra real heredan el tema de GLPI.
+
+`tests/ui-handoff.js` abre dos pestañas con un backend simulado compartido. A recibe
+el aviso y pulsa Ceder control; B reconoce su credencial pre-registrada en su siguiente
+consulta. Verifica ausencia de navegación, borradores intactos, token nuevo en el
+formulario de B y permiso de envío retirado a A en modo estricto.
+Se ejecuta con `run-code` igual que ui-checks.js. La suite PHP comprueba también
+cesión a una solicitud sustituida, una pestaña ajena y solicitudes abandonadas.

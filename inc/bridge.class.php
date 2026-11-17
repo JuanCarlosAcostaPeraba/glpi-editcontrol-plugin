@@ -145,6 +145,7 @@ final class PluginEditcontrolBridge {
                 'csrf'=>Session::getNewCSRFToken(), 'mode'=>self::config()['mode'],
                 'canEdit'=>$item->can($id, UPDATE),
                 'interval'=>max(15, (int)self::config()['ttl'] / 3), 'admin'=>self::admin(),
+                'pollInterval'=>8,
                 'url'=>Plugin::getWebDir('editcontrol') . '/ajax/lease.php'];
             echo '<div class="editcontrol-bootstrap" data-config="' . htmlspecialchars(json_encode($cfg, JSON_THROW_ON_ERROR), ENT_QUOTES, 'UTF-8') . '"></div>';
             // Read rendering is complete; a long page render must not hold the ticket mutex.
