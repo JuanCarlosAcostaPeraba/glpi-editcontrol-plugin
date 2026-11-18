@@ -3,6 +3,11 @@
 El responsable reactivó 0.3.1 y pasó a modo solo aviso por nuevos bloqueos del editor.
 0.3.2 corrige el flujo de guardado AJAX y conserva ese modo. No se pasa a estricto.
 El fucsia se aplica también en aviso; la escritura sigue permitida por ese modo.
+0.3.2 instalada y activa: esquema 3, modo warning, toma editors, timeout de solicitudes 120.
+Migración y pruebas MariaDB en tablas temporales completadas correctamente. No se
+reiniciaron servicios ni se guardaron tickets de prueba. La inspección de una página
+real confirmó modo aviso, fucsia visible y textarea de tarea sin disabled/readonly.
+Esto no sustituye la repetición del guardado por los técnicos afectados.
 Se añade esquema 3 para reconocer guardados propios sin aceptar cambios externos.
 Las pruebas de navegador usan tareas ficticias; no se guardan tareas de prueba reales.
 

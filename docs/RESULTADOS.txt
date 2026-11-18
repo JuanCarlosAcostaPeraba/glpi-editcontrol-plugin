@@ -6,7 +6,10 @@ Seis suites de navegador: casos previos, TinyMCE 7.9.2 real, tareas cargadas con
 300 entradas, tres guardados AJAX consecutivos, segunda tarea sin recargar,
 avance de versión propio, rechazo de cambios externos, readonly nativo y fucsia en aviso.
 Capturas de escritorio/móvil con datos ficticios, sin incidencia visual detectada.
-Producción permanece en modo solo aviso; no se activa estricto durante la actualización.
+Producción: 0.3.2 activa, schema_version=3, mode=warning, takeover_policy=editors.
+MariaDB real (tablas temporales): recibos propios, segunda escritura y rechazo externo: OK.
+Página real: aviso fucsia en warning y fuente del editor de tarea habilitada, inspección sin guardar.
+No se activa estricto durante la actualización.
 Las pruebas automatizadas no modifican tickets reales.
 
 PASS: API REST reconocida por ruta exacta
