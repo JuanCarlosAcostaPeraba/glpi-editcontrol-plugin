@@ -14,7 +14,8 @@
   const cfg = {id:1,baseline:'current',nonce:linked?actor:'test-nonce',csrf:'test-csrf',canEdit:scenario!=='reader',canTakeover:scenario==='linked-takeover'||strictScenario&&scenario!=='takeover-denied',mode:linked||strictScenario&&scenario!=='mode-switch'?'strict':'warning',interval:40,pollInterval:8,url:linked?location.origin+'/lease':'https://example.test/lease'};
   document.querySelector('.editcontrol-bootstrap').dataset.config=JSON.stringify(cfg);
   window.fixture = {calls:[], interval:null, scenario, failed:false, elapsed:0, editorMode:'design'};
-  window.tinymce={get:id=>id==='fixture-content'?{mode:{get:()=>fixture.editorMode,set:mode=>{fixture.editorMode=mode;}}}:null};
+  const fixtureEditor={mode:{get:()=>fixture.editorMode,set:mode=>{fixture.editorMode=mode;}}};
+  window.tinymce={get:id=>id==='fixture-content'?fixtureEditor:null};
   const realNow=Date.now(); Date.now=()=>realNow+fixture.elapsed;
   const actualInterval=window.setInterval;
   window.setInterval=(fn,delay)=>{fixture.interval=fn;fixture.delay=delay;return 1;};

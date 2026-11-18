@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS glpi_plugin_editcontrol_leases (
  requested bigint NOT NULL DEFAULT 0,
  requester_token_hash char(64) NOT NULL DEFAULT '',
  requester_session_hash char(64) NOT NULL DEFAULT '',
+ write_from char(64) NOT NULL DEFAULT '',
+ write_to char(64) NOT NULL DEFAULT '',
  KEY expires (expires)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS glpi_plugin_editcontrol_events (

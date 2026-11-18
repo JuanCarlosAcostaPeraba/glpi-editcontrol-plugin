@@ -27,7 +27,7 @@ async (page) => {
   await other.goto(target+'B');
   await other.getByRole('button',{name:'Solicitar control',exact:true}).click();
   await other.getByRole('button',{name:'Solicitud enviada',exact:true}).waitFor();
-  if (!await other.locator('textarea').isDisabled()) throw new Error('Non-owner textarea is editable');
+  if (await other.locator('textarea').isEditable()) throw new Error('Non-owner textarea is editable');
   await other.locator('textarea').evaluate(node=>{node.value='Borrador de Luis sin guardar';});
   await page.bringToFront();
   await page.evaluate(async()=>{fixture.elapsed+=8000;await fixture.interval();});

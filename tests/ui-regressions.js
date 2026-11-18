@@ -25,13 +25,13 @@ async (page) => {
   await page.goto(target + 'A');
   const editorId = await page.evaluate(() => createTask());
   const textarea = page.locator('#' + editorId);
-  check(await textarea.isDisabled(), 'Slow initial acquisition did not protect the new task');
+  check(!await textarea.isEditable(), 'Slow initial acquisition did not protect the new task');
   unblock();
   await page.getByRole('status').filter({hasText:'Ana Pérez (tú)'}).waitFor();
   await page.waitForFunction(id => tinymce.get(id).mode.get() === 'design', editorId);
   const editorBody = page.frameLocator('iframe#' + editorId + '_ifr').locator('body');
   await editorBody.fill('Nueva tarea redactada tras cargar 300 tareas');
-  check(!await textarea.isDisabled(), 'Owning technician cannot use the delayed task');
+  check(await textarea.isEditable(), 'Owning technician cannot use the delayed task');
   await page.evaluate(async () => { fixture.elapsed += 86400000; await fixture.poll(true); });
   check(await page.getByRole('status').textContent().then(s => s.includes('(tú)')), 'Idle owner lost control');
   const readonlyId = await page.evaluate(() => createTask(true));

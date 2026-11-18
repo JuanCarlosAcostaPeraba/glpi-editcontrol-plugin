@@ -11,6 +11,8 @@
     let requestToken = '', pendingRequestKey = '', generation = 0, lostControl = false, available = false;
     let lastHeartbeat = 0, lastPoll = 0;
     const observedEditors = new WeakSet();
+    const managedEditors = new WeakMap();
+    let submittingNavigation = false;
     let fieldsScheduled = false;
     const scheduleFields = () => {
       if (fieldsScheduled) return;
@@ -111,23 +113,27 @@
             editor.on('init', scheduleFields);
             observedEditors.add(editor);
           }
-          const nativeReadonly = control.readOnly || window.tinymce_editor_configs?.[control.id]?.readonly === true;
-          if (block && !control.disabled) {
-            // Remember ownership BEFORE TinyMCE initializes from this disabled
-            // textarea. Otherwise it inherits readonly and cannot be restored.
-            if (control.tagName === 'TEXTAREA' && !nativeReadonly && (!editor || editor.mode?.get?.() !== 'readonly')) {
-              control.dataset.editcontrolEditorReadonly = '1';
-            }
-            control.dataset.editcontrolDisabled = '1'; control.disabled = true;
+          const textarea = control.tagName === 'TEXTAREA';
+          const nativeReadonly = (!!control.readOnly && !control.dataset.editcontrolReadonly)
+            || window.tinymce_editor_configs?.[control.id]?.readonly === true;
+          if (textarea) {
+            // Never disable TinyMCE's source textarea. Deferred initialization or
+            // cloned task forms must not inherit a permanently disabled editor.
+            if (managed) { control.disabled = false; delete control.dataset.editcontrolDisabled; }
+            if (block && !control.readOnly) { control.dataset.editcontrolReadonly = '1'; control.readOnly = true; }
+            if (!block && control.dataset.editcontrolReadonly) { control.readOnly = false; delete control.dataset.editcontrolReadonly; }
+          } else {
+            if (block && !control.disabled) { control.dataset.editcontrolDisabled = '1'; control.disabled = true; }
+            if (!block && managed) { control.disabled = false; delete control.dataset.editcontrolDisabled; }
           }
-          if (!block && managed) { control.disabled = false; delete control.dataset.editcontrolDisabled; }
-          if (editor?.mode?.set) {
+          if (editor?.mode?.set && editor.initialized !== false) {
             try {
-              if (block && control.dataset.editcontrolEditorReadonly && editor.mode.get() !== 'readonly') {
+              if (block && !nativeReadonly && !managedEditors.has(editor) && editor.mode.get() === 'design') {
+                managedEditors.set(editor, 'design');
                 editor.mode.set('readonly');
-              } else if (!block && control.dataset.editcontrolEditorReadonly && !nativeReadonly) {
-                if (editor.mode.get() !== 'design') editor.mode.set('design');
-                delete control.dataset.editcontrolEditorReadonly;
+              } else if (!block && managedEditors.has(editor)) {
+                if (!nativeReadonly && editor.mode.get() !== managedEditors.get(editor)) editor.mode.set(managedEditors.get(editor));
+                managedEditors.delete(editor);
               }
             } catch { /* Editor initialization may still be in flight; server validation remains authoritative. */ }
           }
@@ -161,6 +167,11 @@
       if (c.mode === 'strict' && (!mine || changed) && e.target.method.toLowerCase() === 'post' && ticketForm(e.target)) {
         e.preventDefault(); e.stopImmediatePropagation();
         msg.textContent = 'Este ticket está en uso o se ha actualizado. Conserve su texto antes de actualizar la página.';
+      }
+      if (e.target.method.toLowerCase() === 'post' && ticketForm(e.target)) {
+        // AJAX handlers preventDefault later in the event. A real navigation
+        // must let the server finish its write before releasing ownership.
+        queueMicrotask(() => { if (!e.defaultPrevented) submittingNavigation = true; });
       }
     }, true);
     // Batch additions and ignore TinyMCE toolbar/text mutations on large timelines.
@@ -203,6 +214,7 @@
       if (r.mode) c.mode = r.mode;
       if (typeof r.can_edit === 'boolean') c.canEdit = r.can_edit;
       if (typeof r.can_takeover === 'boolean') c.canTakeover = r.can_takeover;
+      if (r.mine && !r.changed && typeof r.baseline === 'string') c.baseline = r.baseline;
       if (r.generation !== undefined) generation = r.generation;
       if (r.token) { token = r.token; requestToken = ''; lostControl=false; lastHeartbeat = Date.now(); }
       if (r.mine && requestToken) {
@@ -242,11 +254,11 @@
       handoff.disabled = false;
       handoff.setAttribute('aria-label', `Ceder control a ${r.requester_name || 'otro técnico'}`);
       if (!notice.hidden) bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
-      if (c.mode === 'strict' && r.owner && !mine) bar.classList.add('editcontrol-blocked');
-      dock.classList.toggle('editcontrol-dock-blocked', c.mode === 'strict' && !!r.owner && !mine);
+      if (r.owner && !mine) bar.classList.add('editcontrol-blocked');
+      dock.classList.toggle('editcontrol-dock-blocked', !!r.owner && !mine);
       dock.classList.toggle('editcontrol-dock-notice', !notice.hidden);
       dockButton.textContent = !notice.hidden ? 'Solicitud de control' : mine ? 'Control: tú'
-        : r.owner ? `Bloqueado: ${r.owner}` : 'Control disponible';
+        : r.owner ? `${c.mode === 'strict' ? 'Bloqueado' : 'En uso'}: ${r.owner}` : 'Control disponible';
       dockButton.title = msg.textContent;
       fields();
     }
@@ -258,7 +270,8 @@
       msg.textContent = error.name === 'TypeError' || error.name === 'TimeoutError'
         ? 'No se puede consultar la actividad del ticket. Se reintentará automáticamente.' : error.message;
       bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
-      if (c.mode === 'strict') { mine = false; fields(); }
+      if (c.mode === 'strict') mine = false;
+      fields();
       dockButton.textContent = 'Control sin verificar'; dockButton.title = msg.textContent;
     }
     request.onclick = async () => {
@@ -321,7 +334,7 @@
     // Best-effort navigation/close release; explicit takeover recovers abandoned tabs.
     window.addEventListener('pagehide', () => {
       stopped = true;
-      if (!token) return;
+      if (!token || submittingNavigation) return;
       fetch(c.url, {method:'POST', credentials:'same-origin', body:body('release'), headers:headers(), keepalive:true}).catch(() => {});
       token = ''; mine = false;
     });

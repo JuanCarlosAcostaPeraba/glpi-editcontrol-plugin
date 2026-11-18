@@ -1,13 +1,13 @@
-# Control de edición para GLPI — 0.3.1
+# Control de edición para GLPI — 0.3.2
 
 Control de edición simultánea de tickets desde la interfaz central de GLPI.
 No modifica el núcleo de GLPI y no reutiliza sus tablas ObjectLock.
 
-**0.3.1: candidata de corrección, pendiente de repetir la prueba integrada.**
-Tras una prueba inicial correcta de 0.3.0 con dos técnicos, se notificaron bloqueos
-por inactividad y en editores de tareas. El plugin está desactivado hasta comprobar
-las correcciones en los tickets afectados. Entorno conocido: GLPI 11.0.4,
-PHP 8.2.35 y MariaDB 11.8.3. GLPI 12 sigue sin validación integrada.
+**0.3.2: corrección del guardado de tareas AJAX y del fucsia en modo aviso.**
+Se mantiene el modo solo aviso de producción. La 0.3.1 no resolvió todos los
+casos de tareas bloqueadas. Se reproducen ahora guardado, apertura de una segunda
+tarea y guardados consecutivos sin recargar, manteniendo la detección de cambios
+externos. Entorno conocido: GLPI 11.0.4 / PHP 8.2.35 / MariaDB 11.8.3.
 
 ## Uso
 
@@ -20,7 +20,9 @@ el control. No se comparte el token entre pestañas, ni siquiera del mismo usuar
 Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
 
 El control **no caduca por inactividad**, al ocultar una pestaña o al suspenderse
-el navegador. Al salir o guardar correctamente se intenta liberar. Si el navegador
+el navegador. Al salir o guardar con navegación completa se intenta liberar.
+El guardado AJAX conserva el control y actualiza la versión confirmada de esa
+pestaña. Un cambio de otro técnico o integración sigue invalidando el formulario. Si el navegador
 se cierra inesperadamente o falla la liberación, otro técnico autorizado puede
 **Tomar control**. La caducidad configurada afecta a solicitudes sin respuesta,
 no al propietario. Las sesiones y los permisos de GLPI siguen aplicándose.
@@ -43,8 +45,8 @@ técnicos con permiso de edición. La segunda permite recuperar tickets de técn
 La toma registra actor, propietario anterior y fecha, invalida el token anterior
 y exige que el propietario mostrado no haya cambiado antes del clic.
 
-En modo estricto, quienes no tienen el control ven la barra fucsia y el formulario
-en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
+Cuando otro técnico tiene el control, la barra es fucsia en aviso y en estricto.
+Solo el modo estricto deja el formulario en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
 escribir dentro del editor para mantener el control durante ediciones largas.
 
 Si el ticket cambia, se pierde la conexión o un técnico autorizado

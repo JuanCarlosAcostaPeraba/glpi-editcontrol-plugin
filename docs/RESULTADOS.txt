@@ -1,16 +1,13 @@
-Fecha: 2026-11-17
-Versión: 0.3.1 — candidata de corrección, pendiente de repetir prueba integrada.
-53 comprobaciones de servicio (SQLite) y 17 guardas CGI con clases GLPI simuladas.
-12 casos originales de navegador: OK.
-Regresiones con TinyMCE 7.9.2 real y backend simulado: 300 tareas, adquisición lenta,
-inicio tardío del editor, inactividad de un día simulada, dos pestañas, borradores,
-readonly nativo, indicador flotante (hover/clic/teclado) y ancho 360 px: OK.
-Recuperación de ticket libre sin permiso de toma a otro propietario: OK.
-Detección mecánica de interfaz: sin hallazgos; revisión visual de escritorio/móvil.
-No se crearon ni modificaron tickets reales en las pruebas automatizadas.
-0.3.1 instalada y desactivada en producción (state=4), sin reiniciar servicios.
-MariaDB real con tablas temporales: propiedad tras un día sin heartbeat, cesión,
-toma explícita y rechazo de token/generación anteriores: OK.
+Fecha: 2026-11-18
+Versión: 0.3.2
+62 comprobaciones de servicio y 20 guardas CGI con clases GLPI simuladas: OK.
+Reproducción: bridge 0.3.1 libera indebidamente tras guardar tarea AJAX; 0.3.2 conserva control.
+Seis suites de navegador: casos previos, TinyMCE 7.9.2 real, tareas cargadas con retraso,
+300 entradas, tres guardados AJAX consecutivos, segunda tarea sin recargar,
+avance de versión propio, rechazo de cambios externos, readonly nativo y fucsia en aviso.
+Capturas de escritorio/móvil con datos ficticios, sin incidencia visual detectada.
+Producción permanece en modo solo aviso; no se activa estricto durante la actualización.
+Las pruebas automatizadas no modifican tickets reales.
 
 PASS: API REST reconocida por ruta exacta
 PASS: API con GLPI en subdirectorio
@@ -64,6 +61,15 @@ PASS: Toma de control sin solicitud entrega una credencial nueva
 PASS: Propietario anterior no guarda despuÃ©s de robar el control
 PASS: No se roba a un propietario distinto del mostrado al pulsar
 PASS: Historial de robo identifica actor y propietario anterior
+PASS: Guardado propio valida su versiÃ³n
+PASS: Guardar tarea AJAX conserva el control
+PASS: Guardado propio avanza versiÃ³n sin recargar
+PASS: Otro tÃ©cnico no obtiene reconocimiento del guardado
+PASS: Otra sesiÃ³n no obtiene reconocimiento del guardado
+PASS: Segunda tarea antes del siguiente sondeo acepta el recibo propio
+PASS: Dos guardados propios conservan la cadena de versiÃ³n
+PASS: Un cambio externo no se reconoce como propio
+PASS: Cambio externo despuÃ©s de tarea propia sigue rechazando escritura obsoleta
 PASS: 8 procesos concurrentes: exactamente un ganador
 PASS: RestricciÃ³n Ãºnica conserva una sola fila
 Suite completada. La validaciÃ³n de GLPI y navegador se ejecuta por separado.
@@ -85,3 +91,6 @@ PASS CGI: api
 PASS CGI: takeover-editor
 PASS CGI: takeover-admins-only
 PASS CGI: takeover-readonly
+PASS CGI: ajax-task-save
+PASS CGI: ajax-fetch-task-save
+PASS CGI: normal-task-save

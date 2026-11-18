@@ -56,7 +56,7 @@ final class TestDB {
                 if (trim($sql)) { $this->pdo->exec($sql); }
             }
         } else {
-            $this->pdo->exec("CREATE TABLE glpi_plugin_editcontrol_leases (tickets_id INTEGER PRIMARY KEY,generation INTEGER DEFAULT 0,revision INTEGER DEFAULT 0,users_id INTEGER DEFAULT 0,token_hash TEXT DEFAULT '',session_hash TEXT DEFAULT '',started INTEGER DEFAULT 0,heartbeat INTEGER DEFAULT 0,expires INTEGER DEFAULT 0,requester INTEGER DEFAULT 0,requested INTEGER DEFAULT 0,requester_token_hash TEXT DEFAULT '',requester_session_hash TEXT DEFAULT '')");
+            $this->pdo->exec("CREATE TABLE glpi_plugin_editcontrol_leases (tickets_id INTEGER PRIMARY KEY,generation INTEGER DEFAULT 0,revision INTEGER DEFAULT 0,users_id INTEGER DEFAULT 0,token_hash TEXT DEFAULT '',session_hash TEXT DEFAULT '',started INTEGER DEFAULT 0,heartbeat INTEGER DEFAULT 0,expires INTEGER DEFAULT 0,requester INTEGER DEFAULT 0,requested INTEGER DEFAULT 0,requester_token_hash TEXT DEFAULT '',requester_session_hash TEXT DEFAULT '',write_from TEXT DEFAULT '',write_to TEXT DEFAULT '')");
             $this->pdo->exec('CREATE TABLE glpi_plugin_editcontrol_events (id INTEGER PRIMARY KEY AUTOINCREMENT,tickets_id INTEGER,users_id INTEGER,previous_users_id INTEGER,event TEXT,occurred INTEGER)');
         }
         $this->pdo->exec('CREATE TABLE glpi_tickets (id INTEGER PRIMARY KEY,name VARCHAR(255),status INTEGER,date_mod VARCHAR(40))');

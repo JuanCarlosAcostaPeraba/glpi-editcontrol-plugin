@@ -85,3 +85,14 @@ nativo, indicador por hover/clic/teclado, restauración al volver arriba y 360 p
 No reproduce todas las personalizaciones del GLPI de producción.
 GitHub Actions ejecuta también las cinco suites de navegador; las guardas CGI se
 comprueban localmente con php-cgi. El servidor de fixtures nunca se instala en GLPI.
+
+## Regresiones 0.3.2
+
+`tests/ui-task-save.js` ejecuta tres guardados con TinyMCE real, crea una segunda
+  tarea sin recargar, comprueba avance de versión y mantiene bloqueo por cambio
+  externo en estricto. Verifica edición y fucsia en aviso, incluido el indicador.
+Se ejecuta con `run-code --filename tests/ui-task-save.js`, tras preparar el fixture.
+Las guardas CGI incluyen el recorrido real guard → saved → shutdown para tareas
+AJAX, fetch y formularios con navegación. La suite de servicio verifica recibos
+propios, sesiones, guardados encadenados y cambios externos. La 0.3.1 falla el caso
+CGI de conservación de propiedad tras guardado AJAX; la corrección lo supera.

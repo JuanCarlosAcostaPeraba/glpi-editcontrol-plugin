@@ -1,16 +1,16 @@
 # Edit Control for GLPI
 
 [![Checks](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml/badge.svg)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/actions/workflows/checks.yml)
-[![Release](https://img.shields.io/badge/Release-0.3.1%20candidate-orange)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.1)
+[![Release](https://img.shields.io/badge/Release-0.3.2%20candidate-orange)](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.2)
 [![License: GPL v3+](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](LICENSE)
 
-**0.3.1 — corrective release candidate; integrated retest pending.**
+**0.3.2 — AJAX task-save corrections; production remains in warning mode.**
 
 Coordinate ticket editing in GLPI: see who has control, request it, hand it over,
 or take it directly when your permissions and the configured policy allow it.
 
 **[Documentación en español](docs/README.es.md)** ·
-[Download](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.1) ·
+[Download](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/tag/0.3.2) ·
 [Changelog](CHANGELOG.md) · [Report an issue](https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/issues)
 
 ![Strict mode: blocked technicians can request or take control](docs/images/strict-mode.png)
@@ -22,7 +22,8 @@ or take it directly when your permissions and the configured policy allow it.
 - Automatic control acquisition by the first eligible visible ticket tab.
 - Current technician displayed in the ticket, with request and inline handoff.
 - Strict mode: other technicians can read and request control; protected writes require the owning tab's credentials.
-- Fuchsia alert and read-only fields for blocked technicians; drafts remain when control changes.
+- Fuchsia alert whenever another technician owns the ticket, in warning and strict mode. Only strict mode restricts editing.
+- Task editors use readonly mode rather than disabled source textareas; drafts remain when control changes.
 - Configurable direct takeover: authorized administrators, or all technicians allowed to edit that ticket.
 - Persistent control without idle expiry; request timeout, activity heartbeats and audit history.
 - A compact floating indicator when the main bar scrolls out of view, with hover, keyboard and click access.
@@ -39,8 +40,10 @@ or take it directly when your permissions and the configured policy allow it.
 
 Version 0.3.0 passed an initial two-technician workflow on 17 November 2026.
 Later reports identified idle lockout and task-editor problems; the plugin was
-disabled. Version 0.3.1 addresses these regressions and adds real TinyMCE tests
-with a 300-task timeline. Integrated retesting on the affected tickets is pending.
+disabled. Version 0.3.1 improved idle control but did not resolve all task editing reports.
+Version 0.3.2 covers the successful AJAX save lifecycle and adds real TinyMCE tests
+with a 300-task timeline. Warning mode is retained in production; strict-mode acceptance
+on affected workflows remains pending.
 The existing runtime accepts GLPI 11 and 12; **GLPI 12 is unverified**. Catalog
 metadata deliberately limits distribution to the verified GLPI 11.0.4 version.
 GLPI 10 is unsupported. Broader support requires integrated testing.
@@ -48,7 +51,7 @@ GLPI 10 is unsupported. Broader support requires integrated testing.
 ## Installation
 
 1. Back up GLPI files and database.
-2. Download `editcontrol-0.3.1.tar.gz` or `.zip` from the release and verify its SHA-256 checksum.
+2. Download `editcontrol-0.3.2.tar.gz` or `.zip` from the release and verify its SHA-256 checksum.
 3. Extract into GLPI's `plugins` directory. The path must be `plugins/editcontrol/setup.php`.
 4. Disable native ObjectLock for Ticket; the plugin refuses that coexistence.
 5. Install and enable **Control de edición** in Setup → Plugins.
@@ -56,8 +59,8 @@ GLPI 10 is unsupported. Broader support requires integrated testing.
 7. Validate your workflows, then select strict mode and the desired takeover policy.
 8. Reload existing ticket tabs once after an update, preserving unsaved text first.
 
-Control does not expire when a tab is idle, hidden or suspended. Navigation/close
-and successful protected saves attempt to release it. After a crash or failed
+Control does not expire when a tab is idle, hidden or suspended. Navigation/close and successful full-page saves attempt to release it. Successful
+AJAX saves retain control and acknowledge only the owning tab's confirmed changes. After a crash or failed
 release, another authorized technician can take control directly. GLPI session
 and permission checks still apply. A former owner can explicitly recover a free,
 unchanged ticket without needing takeover permission.

@@ -4,7 +4,7 @@ $cgi=dirname(PHP_BINARY).DIRECTORY_SEPARATOR.(PHP_OS_FAMILY==='Windows'?'php-cgi
 if (!is_file($cgi)) { throw new RuntimeException('php-cgi is required for browser guard tests'); }
 $cases=['owner','other','wrong-session','stale','ajax-owner','actor-owner','actor-other','group-other',
     'document-other','unrelated-document','linked-busy','linked-free','reparent','api',
-    'takeover-editor','takeover-admins-only','takeover-readonly'];
+    'takeover-editor','takeover-admins-only','takeover-readonly','ajax-task-save','ajax-fetch-task-save','normal-task-save'];
 foreach ($cases as $case) {
     $env=getenv(); $env['REDIRECT_STATUS']='1'; $env['EC_GUARD_CASE']=$case; $env['EC_TEST_DSN']='';
     $pipes=[];

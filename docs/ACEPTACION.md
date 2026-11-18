@@ -53,3 +53,14 @@ no proponer instalación en producción ni declarar ausencia total de sobrescrit
   de scroll ni pérdida de texto. Probar temas claro/oscuro y ancho de 360 px.
 - Liberar administrativamente un ticket sin cambios: el propietario anterior puede
   pulsar Recuperar control aunque no tenga permiso para quitarlo a otro técnico.
+
+## Regresiones 0.3.2
+
+- A adquiere, guarda una tarea por AJAX y abre otra sin recargar: conserva control
+  y puede escribir y guardar. Repetir dos guardados antes del siguiente sondeo.
+- Tras guardado propio, hacer un cambio externo: en estricto debe detectarse y
+  rechazarse el formulario anterior. Otro técnico/sesión no puede usar el recibo.
+- En aviso, A conserva el control y B escribe en una tarea: B ve fucsia arriba y
+  en el indicador flotante pero puede editar. No se cambia a estricto para esta prueba.
+- Las restricciones readonly nativas de GLPI se conservan. La fuente textarea de
+  TinyMCE no recibe disabled del plugin. Probar editores nuevos y clonados.

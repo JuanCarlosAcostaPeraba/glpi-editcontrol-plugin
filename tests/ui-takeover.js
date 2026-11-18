@@ -6,7 +6,7 @@ async (page) => {
   for(const scenario of ['strict','takeover-denied','takeover-race','mode-switch']) {
     await page.goto(root+scenario);
     await page.getByRole('status').filter({hasText:'Ticket bloqueado'}).waitFor();
-    check(await page.locator('textarea').isDisabled(),'Non-owner can edit textarea');
+    check(!await page.locator('textarea').isEditable(),'Non-owner can edit textarea');
     check(await page.getByRole('button',{name:'Guardar',exact:true}).isDisabled(),'Non-owner can submit');
     const colors=await page.getByRole('region',{name:'Actividad del ticket'}).evaluate(el=>({bg:getComputedStyle(el).backgroundColor,fg:getComputedStyle(el).color}));
     check(colors.bg==='rgb(192, 38, 166)','Fuchsia state missing');
@@ -22,11 +22,11 @@ async (page) => {
       await page.getByRole('button',{name:'Tomar control',exact:true}).click();
       if(scenario==='takeover-race') {
         await page.getByRole('status').filter({hasText:'ha cambiado'}).waitFor();
-        check(await page.locator('textarea').isDisabled(),'Failed takeover enabled editing');
+        check(!await page.locator('textarea').isEditable(),'Failed takeover enabled editing');
         check(await page.evaluate(()=>fixture.calls.filter(c=>c.action==='takeover').length)===1,'Takeover retried without user action');
       } else {
         await page.getByRole('status').filter({hasText:'Luis García (tú)'}).waitFor();
-        check(!await page.locator('textarea').isDisabled(),'New owner remains readonly');
+        check(await page.locator('textarea').isEditable(),'New owner remains readonly');
         check(await page.evaluate(()=>fixture.editorMode)==='design','Rich editor remains readonly');
       }
     }
@@ -60,7 +60,7 @@ async (page) => {
   await other.evaluate(()=>fetch('/context-check',{method:'POST',body:'fixture'}));
   await page.bringToFront();await page.evaluate(async()=>{fixture.elapsed+=41000;await fixture.interval();});
   await page.getByRole('status').filter({hasText:'Ya no tienes el control'}).waitFor();
-  check(await page.locator('textarea').isDisabled(),'Previous owner remains editable');
+  check(!await page.locator('textarea').isEditable(),'Previous owner remains editable');
   check(await page.locator('textarea').inputValue()==='Borrador del propietario anterior','Takeover lost a draft');
   check(!calls.includes('request'),'Takeover required a request');
   check(page.url()===target+'A'&&other.url()===target+'B','Takeover navigated the page');

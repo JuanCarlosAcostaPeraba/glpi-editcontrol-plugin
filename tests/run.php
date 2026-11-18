@@ -104,6 +104,23 @@ check($s->owns($s->row(3),30,$forced,'third-session'), 'Toma de control sin soli
 conflict(fn()=>$s->validateWrite(3,20,$requestB,'requester-session',$handoffBase,true), 'Propietario anterior no guarda después de robar el control');
 conflict(fn()=>$s->acquire(3,40,'fourth-session',$handoffBase,true,$expectedGeneration), 'No se roba a un propietario distinto del mostrado al pulsar');
 check((int)$db->pdo->query("SELECT COUNT(*) FROM glpi_plugin_editcontrol_events WHERE tickets_id=3 AND event='takeover' AND users_id=30 AND previous_users_id=20")->fetchColumn()===1, 'Historial de robo identifica actor y propietario anterior');
+$beforeOwnWrite = $s->snapshot(3);
+check($s->validateWrite(3,30,$forced,'third-session',$beforeOwnWrite,true), 'Guardado propio valida su versión');
+$db->pdo->exec("UPDATE glpi_tickets SET name='Efecto de guardar tarea propia' WHERE id=3");
+$s->completeWrite(3,30,$forced,'third-session',$beforeOwnWrite);
+$afterOwnWrite = $s->snapshot(3);
+check($s->owns($s->row(3),30,$forced,'third-session'), 'Guardar tarea AJAX conserva el control');
+check($afterOwnWrite !== $beforeOwnWrite && $s->refreshedBaseline(3,30,$forced,'third-session',$beforeOwnWrite)===$afterOwnWrite, 'Guardado propio avanza versión sin recargar');
+check($s->refreshedBaseline(3,40,'wrong-token','other-session',$beforeOwnWrite)===$beforeOwnWrite, 'Otro técnico no obtiene reconocimiento del guardado');
+check($s->refreshedBaseline(3,30,$forced,'wrong-session',$beforeOwnWrite)===$beforeOwnWrite, 'Otra sesión no obtiene reconocimiento del guardado');
+check($s->validateWrite(3,30,$forced,'third-session',$beforeOwnWrite,true), 'Segunda tarea antes del siguiente sondeo acepta el recibo propio');
+$db->pdo->exec('UPDATE glpi_tickets SET status=2 WHERE id=3');
+$s->completeWrite(3,30,$forced,'third-session',$beforeOwnWrite);
+check($s->refreshedBaseline(3,30,$forced,'third-session',$beforeOwnWrite)===$s->snapshot(3), 'Dos guardados propios conservan la cadena de versión');
+$s->invalidate(3);
+$db->pdo->exec("UPDATE glpi_tickets SET name='Cambio de integración externa' WHERE id=3");
+check($s->refreshedBaseline(3,30,$forced,'third-session',$beforeOwnWrite)===$beforeOwnWrite, 'Un cambio externo no se reconoce como propio');
+conflict(fn()=>$s->validateWrite(3,30,$forced,'third-session',$beforeOwnWrite,true), 'Cambio externo después de tarea propia sigue rechazando escritura obsoleta');
 $s->unlockAll();
 // Actual independent PHP processes race over one row. MySQL uses real GET_LOCK.
 $cmd = [PHP_BINARY, '-d', 'extension_dir=' . ini_get('extension_dir')];

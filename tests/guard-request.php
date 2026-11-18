@@ -59,6 +59,11 @@ if ($case==='reparent') { $item=new Ticket_User(['id'=>7,'tickets_id'=>1]); $ite
 if ($case==='ajax-owner') {
     $_SERVER['HTTP_X_EDITCONTROL_TOKEN']=$token; $_SERVER['HTTP_X_EDITCONTROL_BASELINE']=$base; $_SERVER['HTTP_X_EDITCONTROL_TICKET']='1'; $_POST=[];
 }
+if (in_array($case,['ajax-task-save','ajax-fetch-task-save','normal-task-save'],true)) {
+    $item=new TicketTask(['id'=>7,'tickets_id'=>1]);
+    if ($case==='ajax-task-save') $_SERVER['HTTP_X_REQUESTED_WITH']='XMLHttpRequest';
+    if ($case==='ajax-fetch-task-save') $_SERVER['HTTP_X_EDITCONTROL_TOKEN']=$token;
+}
 if (str_starts_with($case,'takeover-')) {
     Session::$user=20;
     if ($case==='takeover-admins-only') Config::$policy='admins';
@@ -68,7 +73,16 @@ if (str_starts_with($case,'takeover-')) {
 } else {
     PluginEditcontrolBridge::guard($item);
     $allowed=is_array($item->input); $expected=!$blocked;
+    if (in_array($case,['ajax-task-save','ajax-fetch-task-save','normal-task-save'],true)) {
+        $DB->doQuery("UPDATE glpi_tickets SET name='Guardado propio de tarea' WHERE id=1");
+        PluginEditcontrolBridge::saved($item);
+    }
 }
 PluginEditcontrolBridge::shutdown();
 if ($allowed!==$expected) { throw new RuntimeException('Unexpected guard result: '.$case); }
+if (in_array($case,['ajax-task-save','ajax-fetch-task-save','normal-task-save'],true)) {
+    $retained=$s->owns($s->row(1),10,$token,'owner-session');
+    if ($retained!==($case!=='normal-task-save')) throw new RuntimeException('Unexpected post-save ownership: '.$case);
+    if ($retained && $s->refreshedBaseline(1,10,$token,'owner-session',$base)!==$s->snapshot(1)) throw new RuntimeException('Own AJAX save was marked external');
+}
 echo 'GUARD_RESULT='.json_encode(['case'=>$case,'allowed'=>$allowed,'ok'=>true]);

@@ -91,7 +91,7 @@ final class PluginEditcontrolService {
         $token = bin2hex(random_bytes(32));
         $hash = $this->quote(hash('sha256', $token));
         $session = $this->quote(hash('sha256', $session));
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1, users_id=$user,token_hash=$hash,session_hash=$session,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='',write_from='',write_to='' WHERE tickets_id=$id");
         $this->event($id, $user, $force ? 'takeover' : 'acquired', (int)$r['users_id']);
         return $token;
     }
@@ -103,7 +103,7 @@ final class PluginEditcontrolService {
     public function clear(int $id, int $actor, string $reason): void {
         $this->lock($id);
         $old = (int)$this->row($id)['users_id'];
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET users_id=0,token_hash='',session_hash='',expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET users_id=0,token_hash='',session_hash='',expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='',write_from='',write_to='' WHERE tickets_id=$id");
         if ($old) { $this->event($id, $actor, $reason, $old); }
     }
     public function release(int $id, int $user, string $token, string $session): void {
@@ -148,20 +148,40 @@ final class PluginEditcontrolService {
         $targetTokenHash = $this->quote($r['requester_token_hash']);
         $targetSessionHash = $this->quote($r['requester_session_hash']);
         // Never expose a free interval: assign directly to the requesting tab under the same mutex.
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1,users_id=$target,token_hash=$targetTokenHash,session_hash=$targetSessionHash,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET generation=generation+1,users_id=$target,token_hash=$targetTokenHash,session_hash=$targetSessionHash,started=UNIX_TIMESTAMP(),heartbeat=UNIX_TIMESTAMP(),expires=0,requester=0,requested=0,requester_token_hash='',requester_session_hash='',write_from='',write_to='' WHERE tickets_id=$id");
         $this->event($id, $user, 'handoff_sent');
         $this->event($id, $target, 'handoff_received', $user);
     }
-    public function validateWrite(int $id, int $user, string $token, string $session, string $baseline, bool $strict): void {
+    public function refreshedBaseline(int $id, int $user, string $token, string $session, string $baseline): string {
         $r = $this->expire($id);
-        if (!$this->owns($r, $user, $token, $session) || !hash_equals($this->snapshot($id), $baseline)) {
+        if ($this->owns($r, $user, $token, $session) && $r['write_from'] !== ''
+            && hash_equals($r['write_from'], $baseline) && hash_equals($r['write_to'], $this->snapshot($id))) {
+            return $r['write_to'];
+        }
+        return $baseline;
+    }
+    public function completeWrite(int $id, int $user, string $token, string $session, string $baseline): void {
+        $r = $this->expire($id);
+        if (!$this->owns($r, $user, $token, $session)) { throw new PluginEditcontrolConflict('El control ha cambiado antes de completar el guardado.'); }
+        $from = $this->quote($baseline);
+        $to = $this->quote($this->snapshot($id));
+        // Called only after a successful, validated owner write, under the mutex.
+        // A later external write invalidates this receipt; it cannot approve stale data.
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET write_from=$from,write_to=$to WHERE tickets_id=$id");
+    }
+    public function validateWrite(int $id, int $user, string $token, string $session, string $baseline, bool $strict): bool {
+        $r = $this->expire($id);
+        $effective = $this->refreshedBaseline($id, $user, $token, $session, $baseline);
+        $valid = $this->owns($r, $user, $token, $session) && hash_equals($this->snapshot($id), $effective);
+        if (!$valid) {
             $this->event($id, $user, $strict ? 'write_denied' : 'write_warning');
             if ($strict) { throw new PluginEditcontrolConflict('Guardado rechazado: control perdido o datos modificados. Conserve el texto y recargue.'); }
         }
         $this->invalidate($id);
+        return $valid;
     }
     public function invalidate(int $id): void {
         $this->lock($id);
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET revision=revision+1 WHERE tickets_id=$id");
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET revision=revision+1,write_from='',write_to='' WHERE tickets_id=$id");
     }
 }

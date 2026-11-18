@@ -64,6 +64,7 @@ try {
     }
     $row = $s->expire($id);
     $mine = $s->owns($row, $user, $token, session_id());
+    $baseline = $s->refreshedBaseline($id, $user, $token, session_id(), $baseline);
     $name = '';
     if ((int)$row['users_id']) { $u = new User(); if ($u->getFromDB((int)$row['users_id'])) { $name = $u->getName(); } }
     $requesterName = '';
@@ -76,7 +77,7 @@ try {
         'requester'=>(int)$row['requester'], 'requester_name'=>$requesterName,
         'request_key'=>$mine ? $row['requester_token_hash'] : '',
         'requested_by_me'=>$requestToken !== '' ? $s->requestedBy($row, $user, $requestToken, session_id()) : (int)$row['requester'] === $user,
-        'changed'=>!hash_equals($s->snapshot($id), $baseline), 'csrf'=>$csrf];
+        'baseline'=>$baseline, 'changed'=>!hash_equals($s->snapshot($id), $baseline), 'csrf'=>$csrf];
     echo json_encode($out, JSON_THROW_ON_ERROR);
 } catch (Throwable $e) {
     http_response_code($e instanceof PluginEditcontrolConflict ? 409 : (in_array($e->getCode(), [400,403], true) ? $e->getCode() : 503));

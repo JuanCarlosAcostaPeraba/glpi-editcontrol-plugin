@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2] — 2026-11-18 (corrective candidate)
+
+- Keep ownership after successful AJAX task saves; acknowledge confirmed own writes without treating them as external changes.
+- Advance the owning tab's baseline only with an owner/session-bound receipt matching the current snapshot. External writes invalidate receipts.
+- Keep full-page save release, avoiding premature pagehide release during native form submission.
+- Use readonly textareas and track initialized TinyMCE instances instead of disabling rich-editor sources. Preserve native readonly restrictions.
+- Restore fuchsia in warning and strict modes, including the floating indicator. Warning-mode labels say “En uso”.
+- Schema 3 adds two hash fields with an idempotent migration.
+- Add service, CGI lifecycle and real-editor task-save regressions. Production stays in warning mode.
+
 ## [0.3.1] — 2026-11-17 (corrective candidate)
 
 - Keep control indefinitely when idle, hidden or suspended; abandoned ownership is recovered explicitly.

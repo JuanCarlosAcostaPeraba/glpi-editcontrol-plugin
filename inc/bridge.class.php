@@ -5,6 +5,7 @@ final class PluginEditcontrolBridge {
     private static array $validated = [];
     private static array $successful = [];
     private static array $tokens = [];
+    private static array $writeBaselines = [];
     private static array $creationItems = [];
     private static array $baselines = [];
     public static function config(): array {
@@ -19,10 +20,18 @@ final class PluginEditcontrolBridge {
         return self::$service;
     }
     public static function shutdown(): void {
+        $successful = self::$successful;
+        self::$successful = [];
         try {
-            foreach (self::$successful as $id => $_) {
+            foreach ($successful as $id => $_) {
                 if (isset(self::$tokens[$id])) {
-                    self::$service->release($id, (int)Session::getLoginUserID(), self::$tokens[$id], session_id());
+                    if (self::asynchronousWrite()) {
+                        if (isset(self::$writeBaselines[$id])) {
+                            self::$service->completeWrite($id, (int)Session::getLoginUserID(), self::$tokens[$id], session_id(), self::$writeBaselines[$id]);
+                        }
+                    } else {
+                        self::$service->release($id, (int)Session::getLoginUserID(), self::$tokens[$id], session_id());
+                    }
                 }
             }
         } catch (Throwable $e) {
@@ -32,6 +41,10 @@ final class PluginEditcontrolBridge {
             try { self::$service?->unlockAll(); }
             catch (Throwable $e) { Toolbox::logInFile('editcontrol', 'Unlock: ' . $e->getMessage() . "\n"); }
         }
+    }
+    private static function asynchronousWrite(): bool {
+        return strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') === 0
+            || isset($_SERVER['HTTP_X_EDITCONTROL_TOKEN']);
     }
     public static function nonce(): string {
         return $_SESSION['plugin_editcontrol_nonce'] ??= bin2hex(random_bytes(32));
@@ -109,7 +122,8 @@ final class PluginEditcontrolBridge {
             } elseif (self::interactive()) {
                 $token = (string)($_POST['_editcontrol_token'] ?? $_SERVER['HTTP_X_EDITCONTROL_TOKEN'] ?? '');
                 $baseline = (string)($_POST['_editcontrol_baseline'] ?? $_SERVER['HTTP_X_EDITCONTROL_BASELINE'] ?? '');
-                $s->validateWrite($id, (int)Session::getLoginUserID(), $token, session_id(), $baseline, self::config()['mode'] === 'strict');
+                $valid = $s->validateWrite($id, (int)Session::getLoginUserID(), $token, session_id(), $baseline, self::config()['mode'] === 'strict');
+                if ($valid) { self::$writeBaselines[$id] = $baseline; }
                 if ($token !== '') { self::$tokens[$id] = $token; }
             } else {
                 $s->invalidate($id);

@@ -28,8 +28,8 @@ el navegador representa horas en su zona y el panel usa la zona configurada en P
    Asegurar que cambian las fechas de los archivos PHP para que OPcache detecte
    la actualización; si la validación de fechas está desactivada, seguir el
    procedimiento de invalidación de OPcache de la instalación.
-5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v2 añade dos
-   campos de hashes para la solicitud con Migration de GLPI; no borra datos y es idempotente.
+5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v3 añade dos
+   hashes de reconocimiento de guardados propios; la migración es idempotente y no borra datos.
 6. Revisar controles antiguos y liberarlos si corresponde; esperar no los elimina.
    Recargar todos los tickets antes de reactivar tras la prueba de aceptación.
 7. Validar en aviso y posteriormente en estricto.
@@ -73,3 +73,12 @@ En cada actualización de GLPI comprobar orden y contratos de hooks CommonDBTM,
 plantillas PRE/POST_ITEM_FORM, rutas oficiales API, sesión/CSRF, derechos y formularios
 AJAX del timeline. Ejecutar la suite en SQL real y los doce escenarios de aceptación
 en las dos versiones objetivo. Repetir con los plugins y personalizaciones de la instalación.
+
+## Guardados AJAX desde 0.3.2
+
+El control no se libera al guardar una tarea por AJAX. Tras el hook de éxito y bajo
+el mutex del ticket, se registra un recibo con la versión recibida y la confirmada.
+El sondeo solo actualiza la versión si conserva token/sesión de propietario y la
+base sigue coincidiendo con el recibo. Escrituras externas lo invalidan. No se
+reconocen como propias las escrituras ajenas permitidas por el modo aviso.
+Una navegación de formulario completa libera al terminar la petición, no antes.

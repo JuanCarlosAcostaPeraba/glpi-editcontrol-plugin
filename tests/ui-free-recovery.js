@@ -18,7 +18,7 @@ async (page) => {
   await page.evaluate(async () => { fixture.elapsed += 41000; await fixture.interval(true); });
   await page.getByRole('button', {name:'Recuperar control', exact:true}).click();
   await page.getByRole('status').filter({hasText:'(tú)'}).waitFor();
-  if (await page.locator('textarea').isDisabled() || await page.locator('textarea').inputValue() !== 'Borrador conservado') throw new Error('Free ticket recovery failed');
+  if (!await page.locator('textarea').isEditable() || await page.locator('textarea').inputValue() !== 'Borrador conservado') throw new Error('Free ticket recovery failed');
   if (actions.includes('takeover')) throw new Error('Recovery incorrectly requires takeover permission');
   await page.context().unroute('**/lease');
   return {freeTicketRecoverableWithoutTakeoverPermission:true,draftPreserved:true};

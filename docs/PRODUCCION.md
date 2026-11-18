@@ -1,3 +1,13 @@
+# Actualización del 18 de noviembre de 2026
+
+El responsable reactivó 0.3.1 y pasó a modo solo aviso por nuevos bloqueos del editor.
+0.3.2 corrige el flujo de guardado AJAX y conserva ese modo. No se pasa a estricto.
+El fucsia se aplica también en aviso; la escritura sigue permitida por ese modo.
+Se añade esquema 3 para reconocer guardados propios sin aceptar cambios externos.
+Las pruebas de navegador usan tareas ficticias; no se guardan tareas de prueba reales.
+
+## Registro anterior (0.3.1)
+
 # Estado actual
 
 El responsable desactivó el plugin tras reportar dos regresiones en 0.3.0:

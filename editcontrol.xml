@@ -20,9 +20,9 @@
   <readme>https://raw.githubusercontent.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/main/README.md</readme>
   <authors><author>Juan Carlos Acosta Perabá</author></authors>
   <versions><version>
-    <num>0.3.1</num>
+    <num>0.3.2</num>
     <compatibility>11.0.4</compatibility>
-    <download_url>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/download/0.3.1/editcontrol-0.3.1.tar.gz</download_url>
+    <download_url>https://github.com/JuanCarlosAcostaPeraba/glpi-editcontrol-plugin/releases/download/0.3.2/editcontrol-0.3.2.tar.gz</download_url>
   </version></versions>
   <langs><lang>es_ES</lang></langs>
   <license>GPLv3+</license>
