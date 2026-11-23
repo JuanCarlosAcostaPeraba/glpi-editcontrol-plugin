@@ -41,10 +41,11 @@ está certificada.
    El propietario solo puede ceder a la solicitud que está viendo: una sustitución
    concurrente obliga a comprobar el nuevo aviso. La solicitud caduca tras TTL sin
    renovarse; una pestaña cerrada no puede retener una cesión permanentemente.
-9. El control ya no caduca por inactividad ni por ocultar o suspender la pestaña.
-   Si el navegador termina sin liberar, el control permanece hasta una toma explícita
-   o liberación administrativa. La configuración de toma debe permitir la recuperación
-   operativa. El servidor sigue exigiendo sesión válida y permisos de GLPI.
+9. En modo aviso, la presencia se libera en la siguiente consulta al ticket tras
+   pasar el TTL sin señales del propietario. Una pestaña suspendida puede dejar
+   de enviar señales. En estricto, un control abandonado se recupera mediante
+   toma explícita o liberación administrativa. El servidor sigue exigiendo
+   sesión válida y permisos de GLPI.
 10. Los textos de formularios no se guardan como borradores. El rechazo del servidor
     usa el mecanismo de mensajes de GLPI: la recuperación de contenido depende del
     formulario. Los controles y TinyMCE pasan a solo lectura sin perder su valor;
@@ -58,9 +59,9 @@ está certificada.
 12. Cambiar modo/TTL requiere recargar las pestañas. El servidor aplica la configuración
     actual; una barra antigua podría mostrar el modo anterior. Desactivar el plugin
     quita su protección. Un periodo de mantenimiento es obligatorio para actualizar.
-13. Desactivar conserva tablas y tokens. Los controles persistentes no desaparecen
-    por esperar: revisarlos y liberarlos cuando corresponda antes de reactivar;
-    recargar todos los formularios. No hay protección con el plugin inactivo.
+13. Desactivar conserva tablas y tokens. Antes de reactivar en estricto, revisar
+    los controles persistentes y liberarlos cuando corresponda. Recargar todos
+    los formularios. No hay protección con el plugin inactivo.
 14. Los paneles muestran como máximo 200 filas candidatas recientes, filtradas por
     accesibilidad después de obtenerlas. No son un inventario paginado completo.
     El historial crece sin retención automática; definir y ejecutar una política local.

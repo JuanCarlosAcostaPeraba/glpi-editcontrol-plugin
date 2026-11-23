@@ -17,7 +17,7 @@ No usar datos asistenciales. Guardar versión, plugins activos, registros y resu
 | 7. Administración | C libera desde panel y toma control desde barra en otra repetición | A pierde control; no puede guardar ni liberar el control nuevo; historial identifica C, fecha y anterior |
 | 8. Solicitud y cesión | B solicita, A ve el aviso y pulsa Ceder control | Sin salir ni recargar: A deja de tener control y B lo recibe; ambos borradores se conservan; un tercero no puede adelantarse |
 | 9. Pestaña antigua | A conserva pestaña, B toma el control y guarda; reenviar POST de A | El cambio de B persiste y el POST antiguo falla incluso sin JavaScript |
-| 10. Desactivar/actualizar | Finalizar edición, mantenimiento, desactivar, actualizar y revisar controles antes de reactivar | Sin protección mientras está desactivado; esquema/datos se conservan; controles antiguos revisados o liberados; no caducan por esperar |
+| 10. Desactivar/actualizar | Finalizar edición, mantenimiento, desactivar, actualizar y revisar controles antes de reactivar | Esquema y datos conservados. En aviso, la presencia antigua caduca al consultar el ticket. En estricto, se revisan y liberan los controles antiguos según corresponda |
 | 11. Mismo usuario | Dos pestañas A, ambas intentan adquirir; repetir con pestaña duplicada | Solo una posee token; otra no renueva, guarda ni libera su control |
 | 12. Integración externa | A edita; API oficial actualiza o añade tarea/seguimiento/solución | API funciona sin token; revisión invalida formulario de A; A no sobrescribe silenciosamente |
 

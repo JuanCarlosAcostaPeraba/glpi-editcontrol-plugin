@@ -229,7 +229,11 @@
       if (lost) lostControl=true;
       mine = r.mine; available = r.available; changed = changed || r.changed;
       bar.className = normalClass;
-      if (r.owner) {
+      const ownOtherTab = c.mode === 'warning' && r.same_user && !mine;
+      const highlightOwner = !!r.owner && !mine && !ownOtherTab;
+      if (ownOtherTab) {
+        msg.textContent = 'Tienes este ticket abierto en otra pestaña o sesión.';
+      } else if (r.owner) {
         msg.textContent = c.mode === 'strict' && !mine
           ? `Ticket bloqueado por ${r.owner}${r.same_user ? ' (otra pestaña)' : ''}. Puedes consultarlo o solicitar el control.`
           : `${r.owner}${mine ? ' (tú)' : r.same_user ? ' (otra pestaña)' : ''} está usando este ticket.`;
@@ -254,10 +258,11 @@
       handoff.disabled = false;
       handoff.setAttribute('aria-label', `Ceder control a ${r.requester_name || 'otro técnico'}`);
       if (!notice.hidden) bar.className = 'alert alert-warning d-flex align-items-center flex-wrap gap-2 m-3 py-2 px-3';
-      if (r.owner && !mine) bar.classList.add('editcontrol-blocked');
-      dock.classList.toggle('editcontrol-dock-blocked', !!r.owner && !mine);
+      bar.classList.toggle('editcontrol-blocked', highlightOwner);
+      dock.classList.toggle('editcontrol-dock-blocked', highlightOwner);
       dock.classList.toggle('editcontrol-dock-notice', !notice.hidden);
       dockButton.textContent = !notice.hidden ? 'Solicitud de control' : mine ? 'Control: tú'
+        : ownOtherTab ? 'Abierto en otra pestaña'
         : r.owner ? `${c.mode === 'strict' ? 'Bloqueado' : 'En uso'}: ${r.owner}` : 'Control disponible';
       dockButton.title = msg.textContent;
       fields();
@@ -312,7 +317,8 @@
         const active = document.visibilityState === 'visible';
         let r;
         const heartbeatDue = Date.now() - lastHeartbeat >= c.interval * 1000;
-        try { r = await call(mine && active && !changed && heartbeatDue ? 'heartbeat' : 'status'); }
+        const renew = mine && heartbeatDue && (c.mode === 'warning' || (active && !changed));
+        try { r = await call(renew ? 'heartbeat' : 'status'); }
         catch (error) {
           if (error.status !== 409) throw error;
           lostControl=true;
@@ -320,7 +326,7 @@
         }
         // The first eligible visible tab acquires automatically. Readers never acquire.
         if (mine && !r.mine) lostControl=true;
-        if (r.available && c.canEdit && active && !changed && !r.changed && !lostControl) {
+        if (r.available && c.canEdit && active && !changed && !r.changed && (!lostControl || c.mode === 'warning')) {
           try { r = await call('acquire'); }
           catch (error) {
             if (error.status !== 409) throw error;
@@ -335,7 +341,7 @@
     window.addEventListener('pagehide', () => {
       stopped = true;
       if (!token || submittingNavigation) return;
-      fetch(c.url, {method:'POST', credentials:'same-origin', body:body('release'), headers:headers(), keepalive:true}).catch(() => {});
+      fetch(c.url, {method:'POST', credentials:'same-origin', body:body('release', token), headers:headers(), keepalive:true}).catch(() => {});
       token = ''; mine = false;
     });
     window.addEventListener('pageshow', event => { if (event.persisted) { stopped = false; poll(true); } });

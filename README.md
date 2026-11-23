@@ -25,7 +25,7 @@ or take it directly when your permissions and the configured policy allow it.
 - Fuchsia alert whenever another technician owns the ticket, in warning and strict mode. Only strict mode restricts editing.
 - Task editors use readonly mode rather than disabled source textareas; drafts remain when control changes.
 - Configurable direct takeover: authorized administrators, or all technicians allowed to edit that ticket.
-- Persistent control without idle expiry; request timeout, activity heartbeats and audit history.
+- Presence expires when heartbeats stop in warning mode. Strict mode keeps ownership until release or takeover. Both modes include request timeouts and audit history.
 - A compact floating indicator when the main bar scrolls out of view, with hover, keyboard and click access.
 - Independent plugin tables, no GLPI core modifications and no email dependency.
 
@@ -55,7 +55,7 @@ GLPI 10 is unsupported. Broader support requires integrated testing.
 3. Extract into GLPI's `plugins` directory. The path must be `plugins/editcontrol/setup.php`.
 4. Disable native ObjectLock for Ticket; the plugin refuses that coexistence.
 5. Install and enable **Control de edición** in Setup → Plugins.
-6. Open its configuration. Fresh installs default to **warning mode**, a 120-second request timeout and administrators-only direct takeover.
+6. Open its configuration. Fresh installs default to **warning mode**, a 120-second presence and request timeout, and administrators-only direct takeover.
 7. Validate your workflows, then select strict mode and the desired takeover policy.
 8. Reload existing ticket tabs once after an update, preserving unsaved text first.
 
@@ -89,7 +89,7 @@ without control. Read the [known limitations](docs/LIMITACIONES.md) before deplo
 ```sh
 php -d extension=pdo_sqlite tests/run.php
 php tests/run-guards.php  # requires php-cgi and pdo_sqlite
-node --check public/js/editcontrol.js
+node --check public/js/editcontrol-presence.js
 python tools/package.py
 python tools/validate-release.py
 ```

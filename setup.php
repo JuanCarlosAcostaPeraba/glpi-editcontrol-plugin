@@ -8,7 +8,7 @@ function plugin_init_editcontrol() {
     global $PLUGIN_HOOKS;
     $PLUGIN_HOOKS['csrf_compliant']['editcontrol'] = true;
     $PLUGIN_HOOKS['config_page']['editcontrol'] = 'front/config.php';
-    $PLUGIN_HOOKS['add_javascript']['editcontrol'] = ['public/js/editcontrol.js'];
+    $PLUGIN_HOOKS['add_javascript']['editcontrol'] = ['public/js/editcontrol-presence.js'];
     $PLUGIN_HOOKS['add_css']['editcontrol'] = ['public/css/editcontrol.css'];
     $PLUGIN_HOOKS['post_item_form']['editcontrol'] = ['PluginEditcontrolBridge', 'form'];
     $PLUGIN_HOOKS['pre_item_form']['editcontrol'] = ['PluginEditcontrolBridge', 'capture'];

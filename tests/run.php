@@ -122,6 +122,30 @@ $db->pdo->exec("UPDATE glpi_tickets SET name='Cambio de integración externa' WH
 check($s->refreshedBaseline(3,30,$forced,'third-session',$beforeOwnWrite)===$beforeOwnWrite, 'Un cambio externo no se reconoce como propio');
 conflict(fn()=>$s->validateWrite(3,30,$forced,'third-session',$beforeOwnWrite,true), 'Cambio externo después de tarea propia sigue rechazando escritura obsoleta');
 $s->unlockAll();
+$warning = new PluginEditcontrolService($db, 60, 'warning');
+$warning->lock(1);
+$warning->clear(1, 0, 'test_reset');
+$base = $warning->snapshot(1);
+$owner = $warning->acquire(1, 10, 'session-a', $base);
+$db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET heartbeat=UNIX_TIMESTAMP()-45 WHERE tickets_id=1');
+$warning->heartbeat(1, 10, $owner, 'session-a');
+check((int)$warning->expire(1)['heartbeat'] > $warning->presenceCutoff(), 'Una pestaña en aviso renueva su presencia');
+$warning->request(1, 20, $requestB, 'session-b');
+$db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET heartbeat=UNIX_TIMESTAMP()-60 WHERE tickets_id=1');
+$expired = $warning->expire(1);
+check((int)$expired['users_id'] === 0 && (int)$expired['requester'] === 0, 'El aviso caduca en el límite y limpia las solicitudes de una presencia antigua con expires=0');
+check($warning->snapshot(1) === $base, 'La caducidad no cambia la versión del ticket');
+$nextOwner = $warning->acquire(1, 20, 'session-b', $base);
+conflict(fn()=>$warning->heartbeat(1, 10, $owner, 'session-a'), 'Una señal tardía no recupera la presencia anterior');
+conflict(fn()=>$warning->release(1, 10, $owner, 'session-a'), 'Un cierre tardío no libera al nuevo propietario en aviso');
+check($warning->owns($warning->expire(1), 20, $nextOwner, 'session-b'), 'Otro técnico puede adquirir tras la caducidad');
+check(!$warning->validateWrite(1, 10, $owner, 'session-a', $base, false), 'El modo aviso permite guardar aunque la presencia anterior haya caducado');
+$beforeWrite = $warning->snapshot(1);
+check($warning->validateWrite(1, 20, $nextOwner, 'session-b', $beforeWrite, false), 'El propietario en aviso valida su guardado AJAX');
+$db->pdo->exec('UPDATE glpi_plugin_editcontrol_leases SET heartbeat=UNIX_TIMESTAMP()-61 WHERE tickets_id=1');
+$warning->completeWrite(1, 20, $nextOwner, 'session-b', $beforeWrite);
+check($warning->refreshedBaseline(1, 20, $nextOwner, 'session-b', $beforeWrite) === $warning->snapshot(1), 'Un guardado AJAX largo renueva la presencia y confirma su versión');
+$warning->unlockAll();
 // Actual independent PHP processes race over one row. MySQL uses real GET_LOCK.
 $cmd = [PHP_BINARY, '-d', 'extension_dir=' . ini_get('extension_dir')];
 if (!$db->mysql) { array_push($cmd,'-d','extension=pdo_sqlite'); }

@@ -14,7 +14,8 @@ final class PluginEditcontrolBridge {
     public static function service(): PluginEditcontrolService {
         global $DB;
         if (self::$service === null) {
-            self::$service = new PluginEditcontrolService($DB, (int)self::config()['ttl']);
+            $config = self::config();
+            self::$service = new PluginEditcontrolService($DB, (int)$config['ttl'], $config['mode']);
             register_shutdown_function([self::class, 'shutdown']);
         }
         return self::$service;

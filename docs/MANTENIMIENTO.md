@@ -7,15 +7,17 @@ El derecho específico `plugin_editcontrol_admin` con READ autoriza tomar y libe
 el control. No concede acceso adicional a tickets: se comprueba Ticket::can y se
 mantienen las restricciones de perfil/entidad. Separar ambos tipos de administradores.
 
-TTL de solicitudes: 60–1800 segundos, por defecto 120. Heartbeat: TTL/3, mínimo 15 segundos.
-Desde 0.3.1 el control del propietario no caduca, tampoco con el navegador suspendido.
-La recuperación de un control abandonado es por toma explícita o liberación administrativa.
+TTL de solicitudes y de presencia en aviso: 60–1800 segundos, por defecto 120.
+Heartbeat: TTL/3, mínimo 15 segundos. En aviso, la caducidad se comprueba al
+consultar el ticket y oculta las presencias vencidas en el panel administrativo.
+En estricto, la recuperación de un control abandonado es por toma explícita o
+liberación administrativa.
 El propietario y quien espera consultan novedades cada ocho segundos en pestañas
 visibles; un observador sin solicitud usa el intervalo normal del heartbeat.
-Las pestañas ocultas consultan como máximo cada 32 segundos con el temporizador
-predeterminado, sin afectar a la propiedad persistente. Cien propietarios/solicitantes
+Las pestañas ocultas consultan aproximadamente cada 32 segundos si el navegador
+mantiene el temporizador. Cien propietarios/solicitantes
 visibles generan unas 12,5 peticiones por segundo; medir la carga real.
-El historial registra adquisición, toma de control, liberación,
+El historial registra adquisición, toma de control, liberación, caducidad,
 solicitudes, rechazos, avisos y escrituras externas. La fecha usa epoch del SQL;
 el navegador representa horas en su zona y el panel usa la zona configurada en PHP.
 
@@ -30,7 +32,7 @@ el navegador representa horas en su zona y el panel usa la zona configurada en P
    procedimiento de invalidación de OPcache de la instalación.
 5. Ejecutar Instalar/Actualizar en la gestión de plugins. El esquema v3 añade dos
    hashes de reconocimiento de guardados propios; la migración es idempotente y no borra datos.
-6. Revisar controles antiguos y liberarlos si corresponde; esperar no los elimina.
+6. Revisar controles antiguos y liberarlos si corresponde, especialmente en estricto.
    Recargar todos los tickets antes de reactivar tras la prueba de aceptación.
 7. Validar en aviso y posteriormente en estricto.
 
@@ -44,7 +46,8 @@ Finalizar las ediciones, desactivar el plugin en GLPI y recargar las pestañas.
 La desactivación deja de cargar los hooks y elimina la protección de servidor;
 conserva tablas e historial. Los registros no pueden bloquear GLPI sin sus hooks.
 Antes de reactivar, revisar los controles anteriores y liberarlos cuando corresponda.
-Esperar no los caduca. Los formularios antiguos deben recargarse siempre.
+En aviso, la presencia antigua caduca al volver a consultar el ticket. Los
+formularios antiguos deben recargarse siempre.
 
 ## Desinstalar
 

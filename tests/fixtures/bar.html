@@ -19,7 +19,7 @@
   const realNow=Date.now(); Date.now=()=>realNow+fixture.elapsed;
   const actualInterval=window.setInterval;
   window.setInterval=(fn,delay)=>{fixture.interval=fn;fixture.delay=delay;return 1;};
-  let owner = scenario === 'owner' || scenario === 'reader' || scenario === 'html' || scenario === 'race' || strictScenario ? 'Ana Pérez' : '';
+  let owner = ['owner','same-user','reader','html','race'].includes(scenario) || strictScenario ? 'Ana Pérez' : '';
   let generation=1;
   let mine=false, requested=false, firstStatus=true;
   if(!linked)window.fetch=async(url,options)=>{
@@ -33,6 +33,10 @@
       owner='Ana Pérez';return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'Otro técnico tiene el control.'})};
     }
     if(action==='acquire'){owner='Luis García';mine=true;}
+    if(action==='heartbeat'&&fixture.expire){
+      owner='';mine=false;
+      return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'Ha perdido el control.'})};
+    }
     if(action==='takeover'){
       if(scenario==='takeover-race'){owner='Clara';generation++;return {ok:false,status:409,headers:new Headers({'content-type':'application/json'}),json:async()=>({ok:false,message:'El control ha cambiado de técnico.'})};}
       if(Number(options.body.get('expected_generation'))!==generation)throw new Error('Generation mismatch');
@@ -40,10 +44,10 @@
     }
     if(action==='request') requested=true;
     if(action==='release'){owner='';mine=false;}
-    const r={ok:true,owner,mine,generation,mode:strictScenario?'strict':cfg.mode,can_edit:cfg.canEdit,can_takeover:cfg.canTakeover,available:!owner,changed:false,started:1794837600,heartbeat:1794837600,same_user:false,requester_name:'',requested_by_me:requested,csrf:'test-csrf'};
+    const r={ok:true,owner,mine,generation,mode:strictScenario?'strict':cfg.mode,can_edit:cfg.canEdit,can_takeover:cfg.canTakeover,available:!owner,changed:false,started:1794837600,heartbeat:1794837600,same_user:scenario==='same-user',requester_name:'',requested_by_me:requested,csrf:'test-csrf'};
     if(action==='acquire'||action==='takeover')r.token='test-token';
     return {ok:true,status:200,headers:new Headers({'content-type':'application/json'}),json:async()=>r};
   };
 </script>
-<script src="../../public/js/editcontrol.js"></script>
+<script src="../../public/js/editcontrol-presence.js"></script>
 </html>

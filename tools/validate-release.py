@@ -31,7 +31,7 @@ for name in zipped:
     parts=PurePosixPath(name).parts
     assert parts[0]=='editcontrol' and '..' not in parts
     assert not any(p in {'.git','.github','.env','tests','tools','.codebase-memory'} for p in parts)
-for name in ['setup.php','hook.php','LICENSE','editcontrol.xml','editcontrol.png','public/js/editcontrol.js','public/css/editcontrol.css']:
+for name in ['setup.php','hook.php','LICENSE','editcontrol.xml','editcontrol.png','public/js/editcontrol-presence.js','public/css/editcontrol.css']:
     assert 'editcontrol/'+name in zipped, name
 for line in (root/'dist/SHA256SUMS').read_text().splitlines():
     digest,name=line.split('  ')

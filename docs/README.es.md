@@ -19,13 +19,14 @@ Los perfiles de solo lectura nunca adquieren
 el control. No se comparte el token entre pestañas, ni siquiera del mismo usuario.
 Inicio y última actividad se pueden consultar al mantener el puntero sobre la barra.
 
-El control **no caduca por inactividad**, al ocultar una pestaña o al suspenderse
-el navegador. Al salir o guardar con navegación completa se intenta liberar.
+En **solo aviso**, la presencia caduca después del tiempo configurado sin recibir
+señales de la pestaña. En **bloqueo estricto**, el control persiste aunque se
+suspenda el navegador. Al salir o guardar con navegación completa se intenta liberar.
 El guardado AJAX conserva el control y actualiza la versión confirmada de esa
 pestaña. Un cambio de otro técnico o integración sigue invalidando el formulario. Si el navegador
 se cierra inesperadamente o falla la liberación, otro técnico autorizado puede
-**Tomar control**. La caducidad configurada afecta a solicitudes sin respuesta,
-no al propietario. Las sesiones y los permisos de GLPI siguen aplicándose.
+**Tomar control**. La caducidad de las solicitudes se aplica en los dos modos.
+Las sesiones y los permisos de GLPI siguen aplicándose.
 
 Cuando la barra superior queda fuera de pantalla, aparece un indicador compacto
 abajo a la derecha. Muestra el propietario y permite desplegar el mismo aviso y
@@ -46,6 +47,7 @@ La toma registra actor, propietario anterior y fecha, invalida el token anterior
 y exige que el propietario mostrado no haya cambiado antes del clic.
 
 Cuando otro técnico tiene el control, la barra es fucsia en aviso y en estricto.
+En solo aviso, una pestaña de la misma cuenta muestra un mensaje neutro.
 Solo el modo estricto deja el formulario en solo lectura. No se borran textos al perderlo. TinyMCE registra la actividad al
 escribir dentro del editor para mantener el control durante ediciones largas.
 
@@ -63,7 +65,7 @@ mezcla automática de borradores ni recuperación de texto garantizada al rediri
    durante la comprobación de requisitos.
 5. En Configuración → Complementos, instalar y activar **Control de edición**.
 6. Abrir su configuración desde la lista de complementos. Por defecto funciona
-   en **solo aviso**, con caducidad de solicitudes de 120 segundos.
+   en **solo aviso**, con caducidad de presencia y solicitudes de 120 segundos.
 7. Con un perfil autorizado para configurar GLPI, conceder el permiso específico
    de administración a los perfiles elegidos. Renovar sesión/perfil para aplicar derechos.
 8. Completar primero las pruebas del modo aviso. Activar **bloqueo estricto** y

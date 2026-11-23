@@ -12,7 +12,7 @@ class Preview(BaseHTTPRequestHandler):
         route = self.path.split('?', 1)[0]
         files = {'/tests/fixtures/bar.html': ('tests/fixtures/bar.html', 'text/html; charset=utf-8'),
                  '/tests/fixtures/rich-editor.html': ('tests/fixtures/rich-editor.html', 'text/html; charset=utf-8'),
-                 '/public/js/editcontrol.js': ('public/js/editcontrol.js', 'application/javascript')}
+                 '/public/js/editcontrol-presence.js': ('public/js/editcontrol-presence.js', 'application/javascript')}
         files['/public/css/editcontrol.css'] = ('public/css/editcontrol.css', 'text/css')
         if route.startswith('/tests/results/tinymce/'):
             asset = (repo / route.lstrip('/')).resolve()

@@ -10,7 +10,7 @@ final class PluginEditcontrolService {
     private $db;
     private array $held = [];
     private int $ttl;
-    public function __construct($db, int $ttl = 120) {
+    public function __construct($db, int $ttl = 120, private string $mode = 'strict') {
         $this->db = $db;
         $this->ttl = max(60, min(1800, $ttl));
     }
@@ -40,6 +40,9 @@ final class PluginEditcontrolService {
     public function now(): int {
         return (int)$this->db->fetchAssoc($this->q('SELECT UNIX_TIMESTAMP() AS clock'))['clock'];
     }
+    public function presenceCutoff(): ?int {
+        return $this->mode === 'warning' ? $this->now() - $this->ttl : null;
+    }
     public function fingerprint(array $fields, int $revision): string {
         ksort($fields);
         // Database drivers may return numeric values with different PHP types.
@@ -65,10 +68,13 @@ final class PluginEditcontrolService {
     public function expire(int $id): array {
         $this->lock($id);
         $r = $this->row($id);
-        // Ownership is persistent: suspended browsers and idle/locked PCs must
-        // not lose control. Recovery is explicit takeover or administrative release.
-        // Keep request expiry independent of ownership (including legacy rows).
-        if ((int)$r['requester'] > 0 && (int)$r['requested'] <= $this->now() - $this->ttl) {
+        // Use heartbeat for existing rows too, even if they were created with expires=0.
+        $cutoff = (int)$r['users_id'] > 0 ? $this->presenceCutoff() : null;
+        if ($cutoff !== null && (int)$r['heartbeat'] <= $cutoff) {
+            $this->clear($id, 0, 'expired');
+            return $this->row($id);
+        }
+        if ((int)$r['requester'] > 0 && (int)$r['requested'] <= ($cutoff ?? $this->now() - $this->ttl)) {
             $this->q("UPDATE glpi_plugin_editcontrol_leases SET requester=0,requested=0,requester_token_hash='',requester_session_hash='' WHERE tickets_id=$id");
             $r = $this->row($id);
         }
@@ -107,7 +113,8 @@ final class PluginEditcontrolService {
         if ($old) { $this->event($id, $actor, $reason, $old); }
     }
     public function release(int $id, int $user, string $token, string $session): void {
-        $r = $this->expire($id);
+        $this->lock($id);
+        $r = $this->row($id);
         if (!$this->owns($r, $user, $token, $session)) { throw new PluginEditcontrolConflict('La pestaña ya no tiene el control.'); }
         $this->clear($id, $user, 'released');
     }
@@ -161,13 +168,16 @@ final class PluginEditcontrolService {
         return $baseline;
     }
     public function completeWrite(int $id, int $user, string $token, string $session, string $baseline): void {
-        $r = $this->expire($id);
+        // The write may cross the timeout while it holds the ticket mutex.
+        $this->lock($id);
+        $r = $this->row($id);
         if (!$this->owns($r, $user, $token, $session)) { throw new PluginEditcontrolConflict('El control ha cambiado antes de completar el guardado.'); }
         $from = $this->quote($baseline);
         $to = $this->quote($this->snapshot($id));
         // Called only after a successful, validated owner write, under the mutex.
         // A later external write invalidates this receipt; it cannot approve stale data.
-        $this->q("UPDATE glpi_plugin_editcontrol_leases SET write_from=$from,write_to=$to WHERE tickets_id=$id");
+        $heartbeat = $this->mode === 'warning' ? ',heartbeat=UNIX_TIMESTAMP()' : '';
+        $this->q("UPDATE glpi_plugin_editcontrol_leases SET write_from=$from,write_to=$to$heartbeat WHERE tickets_id=$id");
     }
     public function validateWrite(int $id, int $user, string $token, string $session, string $baseline, bool $strict): bool {
         $r = $this->expire($id);
